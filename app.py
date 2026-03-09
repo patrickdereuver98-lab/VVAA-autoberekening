@@ -11,46 +11,113 @@ from dateutil.relativedelta import relativedelta
 # --- 1. VvAA HUISSTIJL & CONFIGURATIE ---
 VVAA_ORANJE = "#E84E0F"
 VVAA_BLAUW = "#00315C"
-VVAA_GRIJS = "#F4F6F8" 
+VVAA_GRIJS_LICHT = "#EBEEF2" # Achtergrond van de app voor contrast
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
 
 vvaa_css = f"""
 <style>
-    .stApp {{ background-color: {VVAA_GRIJS} !important; }}
-    .stApp, p, label, span, div[data-testid="stMarkdownContainer"] > p, li {{ color: {VVAA_BLAUW} !important; font-family: 'Arial', sans-serif; }}
-    h1, h2, h3, h4, h5, h6 {{ color: {VVAA_ORANJE} !important; font-family: 'Arial', sans-serif !important; font-weight: bold; }}
+    /* Achtergrond van de hele app */
+    .stApp {{ background-color: {VVAA_GRIJS_LICHT} !important; }}
     
-    .stButton>button {{ 
-        background-color: {VVAA_ORANJE} !important; color: white !important; 
-        border-radius: 6px; border: none; padding: 10px 24px; font-weight: bold; width: 100%; margin-top: 28px;
-        transition: 0.3s;
+    /* Tekst styling */
+    .stApp, p, label, span, div[data-testid="stMarkdownContainer"] > p, li {{ 
+        color: {VVAA_BLAUW} !important; 
+        font-family: 'Arial', sans-serif; 
     }}
-    .stButton>button:hover {{ background-color: #c7400a !important; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }}
-    .stButton>button p, .stButton>button span {{ color: white !important; }}
     
-    div.stDownloadButton > button {{ 
-        background-color: {VVAA_BLAUW} !important; color: white !important; border-radius: 8px !important;
-        padding: 15px 32px !important; font-size: 18px !important; font-weight: bold !important; width: 100% !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 2px solid {VVAA_BLAUW} !important; transition: 0.3s;
+    h1, h2, h3, h4, h5, h6 {{ 
+        color: {VVAA_BLAUW} !important; 
+        font-family: 'Arial', sans-serif !important; 
+        font-weight: 800 !important; 
     }}
-    div.stDownloadButton > button:hover {{ background-color: #001f3f !important; box-shadow: 0 6px 12px rgba(0,0,0,0.2); }}
-    div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
     
-    div[data-testid="stAlert"] {{ background-color: white !important; border-left: 5px solid {VVAA_ORANJE} !important; padding: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
-    div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
+    /* Sectie titels in Oranje */
+    h3 {{ color: {VVAA_ORANJE} !important; }}
+
+    /* Modern Card Design voor containers */
+    div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stVerticalBlockBorderWrapper"]) {{
+        background-color: #FFFFFF !important;
+        border: 1px solid #CBD5E1 !important;
+        border-radius: 12px !important;
+        padding: 25px !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+        margin-bottom: 25px !important;
+    }}
+
+    /* Input velden contrast verhogen */
+    input, select, div[data-baseweb="select"] > div {{ 
+        border: 1px solid #94A3B8 !important; 
+        background-color: #FFFFFF !important;
+        color: {VVAA_BLAUW} !important;
+        border-radius: 8px !important;
+    }}
     
-    div[data-testid="stExpander"] {{ background-color: white !important; border-left: 4px solid {VVAA_ORANJE} !important; border-radius: 6px; }}
-    .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
-    div[data-testid="stExpander"] details div {{ color: {VVAA_BLAUW} !important; }}
-    
-    input, select, div[data-baseweb="select"] > div {{ background-color: white !important; color: {VVAA_BLAUW} !important; border-radius: 6px !important; border: 1px solid #ddd !important; }}
-    
+    /* Focus op input velden */
+    input:focus {{ border-color: {VVAA_ORANJE} !important; }}
+
+    /* Metric Cards (Resultaat boxen) met meer contrast */
     div[data-testid="metric-container"] {{
-        background-color: white; border-left: 5px solid {VVAA_ORANJE}; padding: 15px 20px; border-radius: 8px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
+        background-color: #F8FAFC !important;
+        border: 2px solid #E2E8F0 !important;
+        border-left: 8px solid {VVAA_ORANJE} !important;
+        padding: 20px !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
     }}
-    div[data-testid="metric-container"] label {{ font-size: 16px !important; font-weight: bold; color: {VVAA_BLAUW} !important; }}
-    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{ color: {VVAA_ORANJE} !important; font-weight: bold; }}
+    
+    div[data-testid="stMetricValue"] {{ color: {VVAA_BLAUW} !important; font-weight: 900 !important; }}
+
+    /* Knoppen styling */
+    .stButton>button {{ 
+        background-color: {VVAA_ORANJE} !important; 
+        color: white !important; 
+        font-weight: bold !important; 
+        border-radius: 8px !important; 
+        width: 100% !important; 
+        border: none !important;
+        height: 3em !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        transition: all 0.3s ease !important;
+    }}
+    .stButton>button:hover {{ 
+        background-color: {VVAA_BLAUW} !important; 
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    }}
+    
+    /* Download Knop specifiek */
+    div.stDownloadButton > button {{ 
+        background-color: {VVAA_BLAUW} !important; 
+        border: 2px solid {VVAA_BLAUW} !important;
+        color: white !important;
+    }}
+    div.stDownloadButton > button:hover {{ 
+        background-color: #FFFFFF !important; 
+        color: {VVAA_BLAUW} !important;
+    }}
+    div.stDownloadButton > button p {{ color: inherit !important; }}
+
+    /* Info en Warning alerts professionaliseren */
+    div[data-testid="stAlert"] {{ 
+        border-radius: 8px !important; 
+        border: 1px solid #E2E8F0 !important;
+        background-color: #FFFFFF !important;
+    }}
+    
+    /* Expander styling */
+    div[data-testid="stExpander"] {{ 
+        background-color: #F1F5F9 !important; 
+        border: 1px solid #E2E8F0 !important; 
+        border-radius: 8px !important; 
+    }}
+    .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-size: 1.1em !important; }}
+
+    /* Dropdown menu items */
+    div[data-baseweb="popover"] ul {{ background-color: #FFFFFF !important; border: 1px solid #CBD5E1 !important; }}
+    div[data-baseweb="popover"] li {{ color: {VVAA_BLAUW} !important; }}
+    div[data-baseweb="popover"] li:hover {{ background-color: #F1F5F9 !important; color: {VVAA_ORANJE} !important; }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
@@ -224,7 +291,6 @@ if kenteken_input:
         with st.container(border=True):
             st.markdown("### ⚙️ 2. Gebruik & Uitgangspunten")
             
-            # --- NIEUWE TOP-SECTIE VOOR KILOMETERS EN HOOFDVINKJES ---
             top1, top2, top3 = st.columns(3)
             with top1:
                 st.markdown("#### Kilometers per jaar")
@@ -243,18 +309,15 @@ if kenteken_input:
                 if is_minder_dan_500:
                     st.info("ℹ️ **Geen bijtelling:** Zorg voor een sluitende rittenadministratie.")
                 if is_young_manual and not is_young_auto:
-                    st.warning(f"⚠️ **Pas op:** Voertuig is pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
+                    st.warning(f"⚠️ **Pas op:** Voertuig is pas {leeftijd.years} jaar oud.")
                 elif is_young_auto and not is_young_manual:
                     st.info(f"💡 **Tip:** De youngtimer-regeling is waarschijnlijk voordeliger.")
-                elif not is_full_ev and is_ev:
-                    st.info("ℹ️ **Hybride auto:** 22% standaard bijtellingstarief is van toepassing.")
                 if is_vervallen_ev and not is_young_manual:
                     st.info(f"⚡ **Let op:** 60-maandenregel EV vervallen. Regels {peil_jaar} toegepast.")
 
             st.markdown("---")
             st.markdown("### 💶 Financiële Specificaties")
             
-            # --- FINANCIELE SPECIFICATIES ---
             col1, col2, col3 = st.columns(3)
             
             with col1:
@@ -313,36 +376,26 @@ if kenteken_input:
                 if gebruik_schatting:
                     with st.expander("ℹ️ Hoe berekenen wij deze schatting?"):
                         st.write("""
-                        - **Onderhoud:** € 0,04 per gereden kilometer.
-                        - **Verzekering:** Afhankelijk van persoon/no-claim. (Blijft op € 0, vul zelf in).
-                        - **Overig:** Vaste aanname van € 250,-.
+                        - **Onderhoud:** € 0,04 per gereden kilometer (totaal).
+                        - **Overig:** Vaste aanname van € 250,- per jaar.
                         """)
                 
                 calc_onderhoud = int(totaal_km * 0.04) if gebruik_schatting else 0
-                
                 onderhoud = st.number_input("Onderhoud (€ / jaar)", value=calc_onderhoud)
-                verzekering = st.number_input("Verzekering (€ / jaar)", value=0, help="Te persoonlijk om in te schatten. Vul uw eigen premie in.")
+                verzekering = st.number_input("Verzekering (€ / jaar)", value=0)
                 overige = st.number_input("Overige kosten (€ / jaar)", value=250 if gebruik_schatting else 0)
                 
-                # Nieuwe Lease / Rente velden (afhankelijk van top vinkje)
                 lease_kosten = 0.0
                 rente_kosten = 0.0
                 if is_geleased:
                     st.markdown("#### Financiering")
-                    st.caption("ℹ️ *Bij Operational Lease zijn Wegenbelasting, Onderhoud en Verzekering vaak al inbegrepen. Zet deze hierboven dan op € 0.*")
                     lease_kosten = st.number_input("Leasekosten (Operational/Private) (€/j)", value=0)
                     rente_kosten = st.number_input("Rentekosten lening (Financial) (€/j)", value=0)
 
-        # Fiscale eisen & berekeningen
-        if totaal_km > 0 and (z_km / totaal_km) < 0.10:
-            st.error(f"🚨 **Fiscale Eis:** Auto wordt voor {(z_km / totaal_km)*100:.1f}% zakelijk gebruikt. Minimaal 10% is vereist.")
-
         afschr = (aanschaf * 0.8) * 0.2
         tot_k = brandstof_kosten + laad_kosten + mrb + onderhoud + verzekering + overige + afschr + lease_kosten + rente_kosten
-        
         is_gemaximeerd = bijt_bruto > tot_k and not is_minder_dan_500
         bijt_definitief = min(bijt_bruto, tot_k) if not is_minder_dan_500 else 0.0
-
         zak_aftrek = tot_k - bijt_definitief
         pri_aftrek = z_km * 0.23
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
@@ -350,9 +403,8 @@ if kenteken_input:
         # CARD 3: Resultaat
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
-            
             if is_gemaximeerd:
-                st.warning(f"⚖️ **Let op: Bijtelling gemaximeerd.** Uw berekende bijtelling (€ {fmt(bijt_bruto)}) is hoger dan de totale werkelijke autokosten (€ {fmt(tot_k)}). U hoeft niet meer bij te tellen dan uw autokosten. Uw bijtelling is afgetopt op € {fmt(bijt_definitief)}.")
+                st.warning(f"⚖️ **Let op: Bijtelling gemaximeerd.** Afgetopt op de totale autokosten (€ {fmt(tot_k)}).")
                 
             st.success(f"💡 **Conclusie:** Vanuit fiscaal oogpunt is de optie **{advies}**.")
             
@@ -360,18 +412,13 @@ if kenteken_input:
             with res1:
                 st.markdown("#### 🏢 Auto Zakelijk")
                 st.write(f"Totale kosten per jaar: **€ {fmt(tot_k)}**")
-                if is_minder_dan_500:
-                    st.write(f"Bijtelling (< 500km privé): **- € 0**")
-                elif is_gemaximeerd:
-                    st.write(f"Bijtelling (afgetopt): **- € {fmt(bijt_definitief)}**")
-                else:
-                    st.write(f"Bijtelling: **- € {fmt(bijt_definitief)}**")
+                st.write(f"Bijtelling: **- € {fmt(bijt_definitief)}**")
                 st.metric("Fiscale Aftrekpost", f"€ {fmt(zak_aftrek)}")
             with res2:
                 st.markdown("#### 🏠 Auto Privé")
                 st.write(f"Vergoeding: **€ 0,23 per zakelijke km**")
                 st.write(f"Aantal zakelijke km: **{fmt(z_km)}**")
-                st.write("<br>", unsafe_allow_html=True) # Witregel voor uitlijning
+                st.write("<br>", unsafe_allow_html=True)
                 st.metric("Fiscale Aftrekpost", f"€ {fmt(pri_aftrek)}")
 
         if gevalideerd:
@@ -391,9 +438,7 @@ if kenteken_input:
                     self.set_fill_color(232, 78, 15); self.rect(0, 0, 210, 15, 'F')
                     logo = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
                     if os.path.exists(logo): self.image(logo, 10, 20, 35)
-                    self.set_xy(10, 32); 
-                    self.set_font(self.font_fam, '', 10); 
-                    self.cell(0, 10, "In het hart van de gezondheidszorg.", ln=True)
+                    self.set_xy(10, 32); self.set_font(self.font_fam, '', 10); self.cell(0, 10, "In het hart van de gezondheidszorg.", ln=True)
                     
                 def footer(self):
                     self.set_y(-15); self.set_fill_color(0, 49, 92); self.rect(0, 282, 210, 15, 'F')
@@ -408,17 +453,13 @@ if kenteken_input:
 
             pdf.set_font(f, 'B', 11); pdf.set_text_color(232, 78, 15); pdf.cell(200, 6, "1. Relatiegegevens", ln=True)
             pdf.set_font(f, '', 10); pdf.set_text_color(0)
-            pdf.cell(35, 5, "Naam relatie:"); pdf.cell(70, 5, clean(klant_naam)); pdf.cell(35, 5, "Datum:"); pdf.cell(50, 5, datetime.datetime.now().strftime("%d-%m-%Y"), ln=True)
+            pdf.cell(35, 5, "Relatie:"); pdf.cell(70, 5, clean(klant_naam)); pdf.cell(35, 5, "Datum:"); pdf.cell(50, 5, datetime.datetime.now().strftime("%d-%m-%Y"), ln=True)
             pdf.cell(35, 5, "Lidnummer:"); pdf.cell(70, 5, clean(klant_nummer), ln=True); pdf.ln(3)
 
             pdf.set_font(f, 'B', 11); pdf.set_text_color(232, 78, 15); pdf.cell(200, 6, "2. Voertuigspecificaties", ln=True)
             pdf.set_font(f, '', 10); pdf.set_text_color(0); pdf.set_fill_color(245)
             pdf.cell(35, 6, " Merk & Type:", fill=True); pdf.cell(155, 6, clean(f"{auto['merk']} {auto['handelsbenaming']} ({kenteken_input.upper()})"), fill=True, ln=True)
-            pdf.cell(35, 6, " Brandstof:", fill=True); pdf.cell(155, 6, brandstof_t, fill=True, ln=True)
-            pdf.cell(35, 6, " Eerste toelating:", fill=True); pdf.cell(155, 6, f"{toelating_nl} ({leeftijd.years} jaar, {leeftijd.months} mnd)", fill=True, ln=True)
-            pdf.cell(35, 6, " Youngtimer:", fill=True); pdf.cell(155, 6, "Ja" if is_young_manual else "Nee", fill=True, ln=True)
-            pdf.cell(35, 6, " < 500 km prive:", fill=True); pdf.cell(155, 6, "Ja (Geen bijtelling)" if is_minder_dan_500 else "Nee", fill=True, ln=True)
-            pdf.cell(35, 6, " Lease auto:", fill=True); pdf.cell(155, 6, "Ja" if is_geleased else "Nee", fill=True, ln=True); pdf.ln(2)
+            pdf.cell(35, 6, " Toelating:", fill=True); pdf.cell(155, 6, f"{toelating_nl} ({leeftijd.years} jaar, {leeftijd.months} mnd)", fill=True, ln=True); pdf.ln(2)
             
             pdf.cell(45, 5, "Cataloguswaarde:"); pdf.cell(45, 5, f"EUR {fmt(auto['catalogusprijs'])}", align='R')
             pdf.cell(10, 5); pdf.cell(45, 5, "Aanschafwaarde:"); pdf.cell(45, 5, f"EUR {fmt(aanschaf)}", align='R', ln=True)
@@ -429,66 +470,43 @@ if kenteken_input:
             pdf.set_font(f, '', 10); pdf.set_text_color(0); pdf.ln(2)
             
             left_col = []
-            if is_brandstof or (not is_brandstof and not is_ev): left_col.append(("Brandstofkosten:", f"EUR {fmt(brandstof_kosten)}"))
+            if is_brandstof or not is_ev: left_col.append(("Brandstofkosten:", f"EUR {fmt(brandstof_kosten)}"))
             if is_ev: left_col.append(("Laadkosten:", f"EUR {fmt(laad_kosten)}"))
+            left_col.extend([("Wegenbelasting:", f"EUR {fmt(mrb)}"), ("Onderhoud:", f"EUR {fmt(onderhoud)}"), ("Verzekering:", f"EUR {fmt(verzekering)}"), ("Overige kosten:", f"EUR {fmt(overige)}"), ("Afschrijving:", f"EUR {fmt(afschr)}"), ("Lease/Rente:", f"EUR {fmt(lease_kosten+rente_kosten)}")])
+            right_col = [("Fiscale vergoeding:", f"EUR {fmt(pri_aftrek)}"), ("Zakelijke km:", fmt(z_km)), ("Privé km:", fmt(p_km)), ("Tarief p/km:", "EUR 0,23")]
             
-            left_col.extend([
-                ("Wegenbelasting:", f"EUR {fmt(mrb)}"), 
-                ("Onderhoud:", f"EUR {fmt(onderhoud)}"), 
-                ("Verzekering:", f"EUR {fmt(verzekering)}"), 
-                ("Overige autokosten:", f"EUR {fmt(overige)}"), 
-                ("Afschrijving:", f"EUR {fmt(afschr)}")
-            ])
-            
-            if is_geleased:
-                left_col.extend([
-                    ("Leasekosten:", f"EUR {fmt(lease_kosten)}"),
-                    ("Rentekosten:", f"EUR {fmt(rente_kosten)}")
-                ])
-            
-            right_col = [("Vergoeding:", f"EUR {fmt(pri_aftrek)}"), ("Zakelijke km:", fmt(z_km)), ("Privé km:", fmt(p_km)), ("Vergoeding p/km:", "EUR 0,23")]
-            
-            max_rows = max(len(left_col), len(right_col))
-            for i in range(max_rows):
+            for i in range(max(len(left_col), len(right_col))):
                 l1, v1 = left_col[i] if i < len(left_col) else ("", "")
                 l2, v2 = right_col[i] if i < len(right_col) else ("", "")
-                pdf.cell(45, 5, l1); pdf.cell(45, 5, v1, align='R'); pdf.cell(10, 5)
-                pdf.cell(45, 5, l2); pdf.cell(45, 5, v2, align='R' if v2 else 'L', ln=True)
+                pdf.cell(45, 5, l1); pdf.cell(45, 5, v1, align='R'); pdf.cell(10, 5); pdf.cell(45, 5, l2); pdf.cell(45, 5, v2, align='R' if v2 else 'L', ln=True)
 
             pdf.ln(2); pdf.set_font(f, 'B', 10)
             pdf.cell(45, 6, "Totale kosten:"); pdf.cell(45, 6, f"EUR {fmt(tot_k)}", align='R', ln=True)
-            
-            lbl_bijt = "Bijtelling (gemaximeerd):" if is_gemaximeerd else ("Bijtelling (< 500km):" if is_minder_dan_500 else "Bijtelling:")
-            pdf.cell(45, 6, lbl_bijt); pdf.cell(45, 6, f"- EUR {fmt(bijt_definitief)}", align='R', ln=True); pdf.ln(2)
+            pdf.cell(45, 6, "Bijtelling:"); pdf.cell(45, 6, f"- EUR {fmt(bijt_definitief)}", align='R', ln=True); pdf.ln(2)
             
             pdf.set_fill_color(245)
             pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(zak_aftrek)} ", fill=True, align='R')
             pdf.cell(10, 8); pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(pri_aftrek)} ", fill=True, align='R', ln=True); pdf.ln(5)
             
-            pdf.set_fill_color(232, 78, 15); pdf.set_text_color(255, 255, 255); pdf.set_font(f, 'B', 11)
+            pdf.set_fill_color(232, 78, 15); pdf.set_text_color(255); pdf.set_font(f, 'B', 11)
             pdf.cell(190, 10, clean(f"  Advies vanuit fiscaal oogpunt: {advies}"), fill=True, ln=True); pdf.ln(4)
             
-            pdf.set_text_color(0, 49, 92); pdf.set_font(f, 'B', 10); pdf.cell(0, 5, "Aandachtspunten bij zakelijk rijden:", ln=True)
-            pdf.set_font(f, '', 8); pdf.set_text_color(0, 0, 0)
+            pdf.set_text_color(0, 49, 92); pdf.set_font(f, 'B', 10); pdf.cell(0, 5, "Aandachtspunten:", ln=True)
+            pdf.set_font(f, '', 8); pdf.set_text_color(0)
             
             punten = [
-                "- De getoonde berekening is een schatting op basis van uw eigen opgave. De werkelijke cijfers kunnen hiervan afwijken.",
+                "- De getoonde berekening is een schatting op basis van uw eigen opgave.",
                 "- Wegenbelasting is gebaseerd op Belastingdienst tarieven 2026.", 
-                "- Na 5 jaar vervallen de afschrijvingskosten.", 
                 "- Bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming."
             ]
-            if is_minder_dan_500:
-                punten.insert(0, "- LET OP: Voor 0% bijtelling is een sluitende rittenadministratie of verklaring vereist.")
-            if is_vervallen_ev:
-                punten.insert(0, f"- LET OP: De 60-maandenregel voor deze EV is verlopen. Tarief van {peil_jaar} is toegepast.")
-            if is_gemaximeerd:
-                punten.insert(0, "- LET OP: De berekende bijtelling was hoger dan de totale kosten, en is daarom gemaximeerd.")
+            if is_minder_dan_500: punten.insert(0, "- Voor 0% bijtelling is een sluitende rittenadministratie vereist.")
+            if is_vervallen_ev: punten.insert(0, f"- De 60-maandenregel voor deze EV is verlopen. Tarief van {peil_jaar} is toegepast.")
                 
             for p in punten: pdf.cell(0, 4, clean(p), ln=True)
 
-            fname = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
+            fname = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}.pdf"
             st.download_button("📄 Autoberekening Downloaden", data=pdf.output(dest='S').encode('latin-1'), file_name=fname)
         else:
             st.info("ℹ️ Vul de Naam en een numeriek Lidnummer in om het rapport te kunnen genereren.")
     else:
-        st.error(f"❌ Geen voertuig gevonden in de RDW-database voor kenteken '{kenteken_input}'. Controleer het kenteken en probeer het opnieuw.")
+        st.error(f"❌ Kenteken niet gevonden.")
