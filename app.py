@@ -19,23 +19,14 @@ st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="w
 
 vvaa_css = f"""
 <style>
-    /* --- 1. ALGEMENE SCALING & ACHTERGROND --- */
+    /* --- 1. ALGEMENE SCALING --- */
     html, body {{
         font-size: 0.92rem !important;
     }}
     
-    .stApp {{ 
-        background-color: {VVAA_LICHTORANJE} !important; 
-        font-family: 'Arial', sans-serif;
-    }}
-    
-    p, label, span, li {{ color: {VVAA_BLAUW} !important; }}
-    
-    /* --- 2. MODERNE HEADERS --- */
-    h1, h2, h3, h4, h5, h6 {{ color: {VVAA_BLAUW} !important; font-weight: bold !important; font-family: 'Arial', sans-serif !important; }}
+    /* --- 2. MODERNE HEADERS & UITLIJNING --- */
     h3 {{ border-bottom: 2px solid {VVAA_ORANJE} !important; padding-bottom: 8px !important; margin-bottom: 20px !important; font-size: 1.3rem !important; }}
     
-    /* Uitlijning fix voor de kolommen */
     [data-testid="column"] h4 {{
         margin-top: 0 !important;
         margin-bottom: 12px !important;
@@ -44,7 +35,7 @@ vvaa_css = f"""
         color: {VVAA_ORANJE} !important;
     }}
 
-    /* --- 3. MODERNE CARDS (Witte vlakken) --- */
+    /* --- 3. MODERNE CARDS (Witte vlakken voor de layout) --- */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         background-color: #FFFFFF !important;
         border: none !important;
@@ -53,50 +44,10 @@ vvaa_css = f"""
         padding: 15px !important;
     }}
 
-    /* --- 4. FIX VOOR INPUTVELDEN, DROPDOWNS & CURSOR --- */
-    div[data-baseweb="input"] {{
-        background-color: #FFFFFF !important;
-        border-radius: 6px !important;
-    }}
-    div[data-baseweb="input"] input {{
-        color: {VVAA_BLAUW} !important;
-        background-color: #FFFFFF !important;
-        caret-color: {VVAA_BLAUW} !important; 
-    }}
-    
+    /* --- 4. SPECIFIEKE TWEAKS --- */
     /* Forceer hoofdletters specifiek in het kenteken veld */
     input[aria-label="Kenteken *"] {{
         text-transform: uppercase !important;
-    }}
-    
-    div[data-baseweb="select"] > div {{ 
-        background-color: #FFFFFF !important; 
-        color: {VVAA_BLAUW} !important; 
-        border-radius: 6px !important; 
-    }}
-    div[data-baseweb="select"] span, div[data-baseweb="select"] div {{ color: {VVAA_BLAUW} !important; }}
-    
-    div[data-baseweb="input"]:focus-within, div[data-baseweb="select"] > div:focus-within {{
-        border-color: {VVAA_ORANJE} !important;
-        box-shadow: 0 0 0 1px {VVAA_ORANJE} !important;
-    }}
-
-    /* AGRESSIEVE DROPDOWN FIX */
-    div[data-baseweb="popover"], 
-    ul[role="listbox"], 
-    ul[data-baseweb="menu"] {{ 
-        background-color: #FFFFFF !important; 
-        border: 1px solid #D1D8E0 !important;
-    }}
-    ul[role="listbox"] li, 
-    li[role="option"] {{ 
-        color: {VVAA_BLAUW} !important; 
-        background-color: #FFFFFF !important; 
-    }}
-    ul[role="listbox"] li:hover, 
-    li[role="option"]:hover {{ 
-        background-color: {VVAA_LICHTORANJE} !important; 
-        color: {VVAA_ORANJE} !important; 
     }}
 
     /* --- 5. KNOPPEN (BUTTONS) --- */
@@ -106,7 +57,6 @@ vvaa_css = f"""
         transition: all 0.3s ease;
     }}
     .stButton>button:hover {{ background-color: #C7400A !important; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(232, 78, 15, 0.3) !important; }}
-    .stButton>button p, .stButton>button span {{ color: white !important; }}
     
     div.stDownloadButton > button {{ 
         background-color: {VVAA_BLAUW} !important; color: white !important; border-radius: 8px !important;
@@ -115,7 +65,6 @@ vvaa_css = f"""
         display: block !important;
     }}
     div.stDownloadButton > button:hover {{ background-color: #001F3F !important; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 49, 92, 0.25) !important; }}
-    div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
     
     /* --- 6. MELDINGEN & ALERTS --- */
     div[data-testid="stAlert"] {{ 
@@ -134,36 +83,6 @@ vvaa_css = f"""
     }}
     div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
     div[data-testid="stAlert"] svg {{ fill: {VVAA_BLAUW} !important; }}
-    
-    /* --- 7. EXPANDER (UITKLAPMENU) FIX --- */
-    div[data-testid="stExpander"] {{ 
-        background-color: #FFFFFF !important; 
-        border-left: 4px solid {VVAA_ORANJE} !important; 
-        border-radius: 6px; 
-        border: 1px solid #E0E6ED !important;
-        margin-bottom: 15px !important;
-    }}
-    
-    /* Forceer de header van de expander altijd naar wit, ongeacht klikken/focus/open/dicht */
-    div[data-testid="stExpander"] details summary,
-    div[data-testid="stExpander"] details summary:hover,
-    div[data-testid="stExpander"] details summary:focus,
-    div[data-testid="stExpander"] details summary:active {{
-        background-color: #FFFFFF !important;
-        color: {VVAA_BLAUW} !important;
-    }}
-    
-    /* Forceer de tekst en het icoontje binnen de header naar VvAA Blauw */
-    div[data-testid="stExpander"] details summary * {{
-        color: {VVAA_BLAUW} !important;
-        fill: {VVAA_BLAUW} !important;
-        font-weight: bold;
-    }}
-    
-    /* Zorg dat het opengeklapte witte vlak netjes blijft */
-    div[data-testid="stExpander"] details > div {{
-        background-color: #FFFFFF !important;
-    }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
@@ -364,9 +283,10 @@ if kenteken_input:
                 with st.expander("ℹ️ Uitleg Waarde & Bijtelling"):
                     st.write("Selecteer het juiste bijtellingsprofiel. De berekende bijtelling wordt automatisch gemaximeerd (afgetopt) als deze onverhoopt hoger uitvalt dan de totale werkelijke autokosten.")
                 
-                st.markdown(f"<div style='height: 35px; display: flex; align-items: center;'><strong>Cataloguswaarde (RDW):</strong>&nbsp;€ {fmt(auto['catalogusprijs'])}</div>", unsafe_allow_html=True)
+                # Kleur toegevoegd aan de div zodat deze altijd netjes blauw blijft en niet grijs wordt
+                st.markdown(f"<div style='height: 35px; display: flex; align-items: center; color: {VVAA_BLAUW};'><strong>Cataloguswaarde (RDW):</strong>&nbsp;€ {fmt(auto['catalogusprijs'])}</div>", unsafe_allow_html=True)
                 
-                aanschaf = st.number_input("Aanschafwaarde / Dagwaarde (€)", value=int(auto['catalogusprijs']))
+                aanschaf = st.number_input("Aanschafprijs / Taxatiewaarde (€)", value=int(auto['catalogusprijs']))
                 
                 idx_bijt = bepaal_bijtelling_index(peil_jaar, is_full_ev, is_young_manual)
                 gekozen_bijt = st.selectbox("Bijtellingsprofiel", BIJTELLING_OPTIES, index=idx_bijt)
@@ -397,7 +317,7 @@ if kenteken_input:
                     if auto['rdw_verbruik'] == 0.0:
                         st.info("ℹ️ RDW verbruik onbekend. Vul zelf in.")
                     
-                    st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Actuele brandstofprijzen ingeladen.</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='height: 35px; display: flex; align-items: center; color: {VVAA_BLAUW};'>Actuele brandstofprijzen ingeladen.</div>", unsafe_allow_html=True)
                     verbruik_l = st.number_input("Verbruik (L/100km)", value=float(auto['rdw_verbruik']))
                     
                     bs_lower = [b.lower() for b in auto['brandstoffen']]
@@ -412,7 +332,7 @@ if kenteken_input:
                 
                 if is_ev:
                     if not is_brandstof: st.info("ℹ️ Stroomverbruik onbekend. Vul zelf in (bijv. 18.0).")
-                    st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Stroomprijs berekend op € 0,40 / kWh.</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='height: 35px; display: flex; align-items: center; color: {VVAA_BLAUW};'>Stroomprijs berekend op € 0,40 / kWh.</div>", unsafe_allow_html=True)
                     verbruik_kwh = st.number_input("Verbruik Stroom (kWh/100km)", value=0.0)
                     price_kwh = 0.40
                     calc_laad = ((z_km + p_km) / 100) * verbruik_kwh * price_kwh
@@ -541,7 +461,7 @@ if kenteken_input:
             pdf.cell(35, 6, " Lease auto:", fill=True); pdf.cell(155, 6, "Ja" if is_geleased else "Nee", fill=True, ln=True); pdf.ln(2)
             
             pdf.cell(45, 5, "Cataloguswaarde:"); pdf.cell(45, 5, clean(f"EUR {fmt(auto['catalogusprijs'])}"), align='R')
-            pdf.cell(10, 5); pdf.cell(45, 5, "Aanschafwaarde:"); pdf.cell(45, 5, clean(f"EUR {fmt(aanschaf)}"), align='R', ln=True)
+            pdf.cell(10, 5); pdf.cell(45, 5, "Aanschaf/Taxatie:"); pdf.cell(45, 5, clean(f"EUR {fmt(aanschaf)}"), align='R', ln=True)
             pdf.cell(45, 5, "Bijtellingsprofiel:"); pdf.set_font(f, '', 9); pdf.cell(145, 5, clean(gekozen_bijt), ln=True); pdf.ln(3)
 
             pdf.set_font(f, 'B', 11); pdf.set_text_color(232, 78, 15)
