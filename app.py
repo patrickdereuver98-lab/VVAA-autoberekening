@@ -2,10 +2,10 @@ import streamlit as st
 import requests
 import datetime
 from fpdf import FPDF
-import base64
+import io
 
 # --- 1. STYLING (VvAA Huisstijl) ---
-st.set_page_config(page_title="VvAA Auto Calculator", page_icon="🚗", layout="wide")
+st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
 
 vvaa_css = """
 <style>
@@ -17,13 +17,8 @@ vvaa_css = """
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
 
-try:
-    st.image("vvaa_logo.png", width=200)
-except:
-    pass
-
-st.title("Autoberekening: Zakelijk of Privé?")
-st.write("Vul de ontbrekende gegevens in om de berekening kloppend te maken met het klantdossier.")
+st.title("Autoberekening zakelijk of prive?")
+st.write("*In het hart van de gezondheidszorg.*")
 
 # --- 2. RDW API FUNCTIE ---
 @st.cache_data
@@ -68,13 +63,10 @@ if kenteken_input:
     if not auto:
         st.error("Kenteken niet gevonden. Controleer de invoer.")
     else:
-        st.success(f"Voertuig: {auto['merk']} {auto['handelsbenaming']} | Bouwjaar: {auto['bouwjaar']} | Brandstof: {auto['brandstof']} | Cataloguswaarde: € {auto['catalogusprijs']:,.2f}")
+        st.success(f"Voertuig: {auto['merk']} {auto['handelsbenaming']} | Datum toelating: {auto['toelating']} | Cataloguswaarde: € {auto['catalogusprijs']:,.2f}")
         
-        # Bepaal EV of Brandstof
-        is_ev = "Elektriciteit" in auto['brandstof']
         leeftijd = datetime.datetime.now().year - auto['bouwjaar']
-        
-        # Default schattingen
+        is_ev = "Elektriciteit" in auto['brandstof']
         est_mrb = 0 if is_ev else (auto['gewicht'] * 0.8)
         
         st.subheader("2. Financiële Details & Verbruik")
@@ -83,142 +75,206 @@ if kenteken_input:
         with col1:
             st.markdown("**Waarde & Bijtelling**")
             aanschafwaarde = st.number_input("Aanschafwaarde (€)", min_value=0.0, step=500.0, value=auto['catalogusprijs'])
-            bijtelling_perc = st.number_input("Percentage Bijtelling (%)", min_value=0.0, max_value=100.0, value=16.0 if is_ev and leeftijd > 2 else 22.0)
-            rente = st.number_input("Rente financiering (€)", value=0.0, step=100.0)
+            bijtelling_perc = st.number_input("Percentage voor de bijtelling (%)", min_value=0.0, max_value=100.0, value=16.0 if is_ev and leeftijd > 2 else 22.0)
             
-        with col2:
-            st.markdown("**Kilometers & Verbruik**")
-            zakelijke_km = st.number_input("Zakelijke km / jaar", min_value=0, value=15000, step=1000)
-            prive_km = st.number_input("Privé km / jaar", min_value=0, value=5000, step=1000)
+            st.markdown("**Kilometers**")
+            zakelijke_km = st.number_input("Zakelijke kilometers op jaarbasis", min_value=0, value=25000, step=1000)
+            prive_km = st.number_input("Privé-kilometers op jaarbasis", min_value=0, value=25000, step=1000)
             totaal_km = zakelijke_km + prive_km
+            st.info(f"Totaal kilometers: **{totaal_km}**")
+
+        with col2:
+            st.markdown("**Verbruik & Kosten (Brandstof/Stroom)**")
+            verbruik_liter = st.number_input("Verbruik (liters per 100 km)", value=1.0)
+            prijs_liter = st.number_input("Brandstofprijs per liter (€)", value=1.95)
             
-            if is_ev:
-                verbruik = st.number_input("Verbruik (kWh per 100 km)", value=18.0)
-                prijs = st.number_input("Elektriciteitsprijs per kWh (€)", value=0.35)
-            else:
-                verbruik = st.number_input("Verbruik (Liters per 100 km)", value=6.0)
-                prijs = st.number_input("Brandstofprijs per liter (€)", value=1.95)
+            verbruik_kwh = st.number_input("Verbruik (KWH per 100 km)", value=28.3)
+            prijs_kwh = st.number_input("Kosten per KWH (€)", value=0.50)
+            
+            st.caption("Let op: Handmatige invoer hieronder overschrijft de automatische berekening.")
+            calc_brandstof = (totaal_km / 100) * verbruik_liter * prijs_liter if verbruik_liter > 0 else 0
+            calc_laad = (totaal_km / 100) * verbruik_kwh * prijs_kwh if verbruik_kwh > 0 else 0
+            
+            brandstofkosten = st.number_input("Brandstofkosten (€)", value=float(calc_brandstof))
+            laadkosten = st.number_input("Laadkosten (€)", value=float(calc_laad))
 
         with col3:
-            st.markdown("**Vaste Kosten (Jaarbasis)**")
+            st.markdown("**Overige Autokosten**")
             mrb = st.number_input("Motorrijtuigenbelasting (€)", value=float(est_mrb))
-            # Schatting onderhoud en verzekering als default invulwaarde
-            est_ond = 300 + (leeftijd * 50) + (totaal_km * 0.02)
-            est_verz = 600 + (auto['catalogusprijs'] * 0.01)
-            
-            onderhoud = st.number_input("Onderhoud (€)", value=float(est_ond))
-            verzekering = st.number_input("Verzekering (€)", value=float(est_verz))
-            overige = st.number_input("Overige autokosten (€)", value=0.0)
+            onderhoud = st.number_input("Onderhoud (€)", value=0.0)
+            verzekering = st.number_input("Verzekering (€)", value=0.0)
+            overige = st.number_input("Overige autokosten (€)", value=500.0)
+            leasebedrag = st.number_input("Leasebedrag all-in / Rente (€)", value=0.0)
 
         # --- BEREKENINGEN ---
         afschrijving = (aanschafwaarde * 0.80) * 0.20
-        brandstofkosten = (totaal_km / 100) * verbruik * prijs
-        totale_kosten = brandstofkosten + mrb + onderhoud + verzekering + overige + afschrijving + rente
+        totale_kosten = laadkosten + brandstofkosten + mrb + onderhoud + verzekering + overige + afschrijving + leasebedrag
         bijtelling_bedrag = auto['catalogusprijs'] * (bijtelling_perc / 100)
         
         aftrek_zakelijk = totale_kosten - bijtelling_bedrag
         aftrek_prive = zakelijke_km * 0.23
 
-        # --- WEERGAVE ZOALS IN EXCEL ---
+        # --- WEERGAVE ---
         st.markdown("---")
-        st.subheader("3. Autoberekening zakelijk of prive?")
+        st.subheader("3. Resultaat")
         
         res1, res2 = st.columns(2)
         
         with res1:
-            st.markdown("#### 🏢 Auto Zakelijk")
-            st.write(f"**Brandstof/Laadkosten:** € {brandstofkosten:,.2f}")
-            st.write(f"**Motorrijtuigenbelasting:** € {mrb:,.2f}")
-            st.write(f"**Onderhoud:** € {onderhoud:,.2f}")
-            st.write(f"**Verzekering:** € {verzekering:,.2f}")
-            st.write(f"**Overige autokosten:** € {overige:,.2f}")
-            st.write(f"**Afschrijving:** € {afschrijving:,.2f}")
-            st.write(f"**Rente financiering:** € {rente:,.2f}")
-            st.markdown(f"**Totale autokosten:** **€ {totale_kosten:,.2f}**")
-            st.write(f"**Minus Bijtelling:** € -{bijtelling_bedrag:,.2f}")
-            st.info(f"**Fiscale aftrekpost:** € {aftrek_zakelijk:,.2f}")
+            st.markdown("#### Auto zakelijk")
+            st.write(f"Laadkosten: € {laadkosten:,.2f}")
+            st.write(f"Brandstofkosten: € {brandstofkosten:,.2f}")
+            st.write(f"Motorrijtuigenbelasting: € {mrb:,.2f}")
+            st.write(f"Onderhoud: € {onderhoud:,.2f}")
+            st.write(f"Verzekering: € {verzekering:,.2f}")
+            st.write(f"Overige autokosten: € {overige:,.2f}")
+            st.write(f"Afschrijving: € {afschrijving:,.2f}")
+            st.write(f"Leasebedrag all-in: € {leasebedrag:,.2f}")
+            st.markdown(f"**Totale autokosten: € {totale_kosten:,.2f}**")
+            st.write(f"Bijtelling: € {bijtelling_bedrag:,.2f}")
+            st.success(f"**Fiscale aftrekpost: € {aftrek_zakelijk:,.2f}**")
 
         with res2:
-            st.markdown("#### 🏠 Auto Privé")
-            st.write(f"**Vergoeding:** € 0.23 per zakelijke kilometer")
-            st.write(f"**Zakelijke kilometers:** {zakelijke_km}")
-            st.write("") # witregels om uit te lijnen
+            st.markdown("#### Auto prive")
+            st.write(f"Vergoeding: € 0,23 per km")
+            st.write(f"Zakelijke kilometers: {zakelijke_km}")
             st.write("")
             st.write("")
             st.write("")
             st.write("")
             st.write("")
-            st.info(f"**Fiscale aftrekpost:** € {aftrek_prive:,.2f}")
+            st.write("")
+            st.write("")
+            st.write("")
+            st.success(f"**Fiscale aftrekpost: € {aftrek_prive:,.2f}**")
 
         st.markdown("---")
         if aftrek_zakelijk > aftrek_prive:
-            advies = "voordeliger"
-            st.success("💡 **Advies vanuit fiscaal oogpunt:** ZAKELIJK is voordeliger.")
+            advies = "Zakelijk voordeliger"
         else:
-            advies = "minder voordelig"
-            st.warning("💡 **Advies vanuit fiscaal oogpunt:** PRIVÉ is voordeliger.")
-
-        # --- AANDACHTSPUNTEN (Uit Excel) ---
-        st.markdown("#### Aandachtspunten bij zakelijk rijden:")
-        st.write("- Controleer of de werkelijke afschrijving afwijkt van de aannames.")
-        st.write("- Btw-correctie privégebruik (meestal 2,7% van de cataloguswaarde) is afhankelijk van de exacte situatie en moet nog in de aangifte verwerkt worden.")
-        st.write("- Bovenstaande is een indicatie, aan deze berekening kunnen geen rechten worden ontleend.")
+            advies = "Prive voordeliger"
+            
+        st.subheader(f"Advies vanuit fiscaal oogpunt: {advies}")
 
         # --- PDF GENERATIE ---
         if st.button("Genereer PDF Rapport"):
             pdf = FPDF()
             pdf.add_page()
             
-            # Kleuren en lettertype
+            # Kleuren
             oranje = (234, 91, 12)
             zwart = (0, 0, 0)
+            grijs = (100, 100, 100)
+            
+            # Header
+            pdf.set_font("Arial", 'B', 20)
+            pdf.set_text_color(*oranje)
+            pdf.cell(200, 10, txt="VvAA", ln=True, align='L')
+            pdf.set_font("Arial", 'I', 12)
+            pdf.set_text_color(*grijs)
+            pdf.cell(200, 8, txt="In het hart van de gezondheidszorg.", ln=True, align='L')
+            pdf.ln(5)
             
             pdf.set_font("Arial", 'B', 16)
-            pdf.set_text_color(*oranje)
-            pdf.cell(200, 10, txt="VvAA Autoberekening: Zakelijk of Prive", ln=True, align='L')
-            
-            pdf.set_font("Arial", size=10)
             pdf.set_text_color(*zwart)
-            pdf.cell(200, 6, txt=f"Relatienaam: {klant_naam} | Relatienummer: {klant_nummer}", ln=True)
-            pdf.cell(200, 6, txt=f"Voertuig: {auto['merk']} {auto['handelsbenaming']} ({kenteken_input.upper()})", ln=True)
-            pdf.cell(200, 6, txt=f"Cataloguswaarde: EUR {auto['catalogusprijs']:,.2f} | Bijtelling: {bijtelling_perc}%", ln=True)
-            pdf.line(10, 40, 200, 40)
+            pdf.cell(200, 10, txt="Autoberekening zakelijk of prive?", ln=True)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
             pdf.ln(5)
             
-            # Tabel Zakelijk
+            # Klant Info
+            pdf.set_font("Arial", '', 10)
+            pdf.cell(50, 6, txt="Naam relatie:", ln=False)
+            pdf.cell(100, 6, txt=str(klant_naam), ln=True)
+            pdf.cell(50, 6, txt="Relatienummer:", ln=False)
+            pdf.cell(100, 6, txt=str(klant_nummer), ln=True)
+            pdf.ln(5)
+            
+            # Auto Info
+            pdf.cell(50, 6, txt="Merk auto:", ln=False)
+            pdf.cell(100, 6, txt=str(auto['merk']), ln=True)
+            pdf.cell(50, 6, txt="Type:", ln=False)
+            pdf.cell(100, 6, txt=str(auto['handelsbenaming']), ln=True)
+            pdf.cell(50, 6, txt="Kenteken:", ln=False)
+            pdf.cell(100, 6, txt=str(kenteken_input.upper()), ln=True)
+            pdf.cell(50, 6, txt="Eerste toelating:", ln=False)
+            pdf.cell(100, 6, txt=str(auto['toelating']), ln=True)
+            pdf.cell(50, 6, txt="Aanschafwaarde:", ln=False)
+            pdf.cell(100, 6, txt=f"EUR {aanschafwaarde:,.0f}", ln=True)
+            pdf.cell(50, 6, txt="Cataloguswaarde:", ln=False)
+            pdf.cell(100, 6, txt=f"EUR {auto['catalogusprijs']:,.0f}", ln=True)
+            pdf.cell(50, 6, txt="Percentage voor de bijtelling:", ln=False)
+            pdf.cell(100, 6, txt=f"{bijtelling_perc}%", ln=True)
+            pdf.ln(5)
+            
+            # Kilometers & Verbruik
+            pdf.cell(60, 6, txt="Zakelijke kilometers op jaarbasis:", ln=False)
+            pdf.cell(40, 6, txt=str(zakelijke_km), ln=True)
+            pdf.cell(60, 6, txt="Prive-kilometers op jaarbasis:", ln=False)
+            pdf.cell(40, 6, txt=str(prive_km), ln=True)
+            pdf.cell(60, 6, txt="Totaal kilometers op jaarbasis:", ln=False)
+            pdf.cell(40, 6, txt=str(totaal_km), ln=True)
+            pdf.ln(2)
+            pdf.cell(60, 6, txt="Verbruik (liters per 100 kilometer):", ln=False)
+            pdf.cell(40, 6, txt=str(verbruik_liter), ln=True)
+            pdf.cell(60, 6, txt="Brandstofprijs per liter:", ln=False)
+            pdf.cell(40, 6, txt=f"EUR {prijs_liter:,.2f}", ln=True)
+            pdf.cell(60, 6, txt="KWH per 100 km:", ln=False)
+            pdf.cell(40, 6, txt=str(verbruik_kwh), ln=True)
+            pdf.cell(60, 6, txt="Kosten per KWH:", ln=False)
+            pdf.cell(40, 6, txt=f"EUR {prijs_kwh:,.2f}", ln=True)
+            pdf.ln(10)
+            
+            # Financiële Tabel
             pdf.set_font("Arial", 'B', 12)
-            pdf.cell(100, 8, txt="Auto Zakelijk", ln=False)
-            pdf.cell(100, 8, txt="Auto Prive", ln=True)
-            
-            pdf.set_font("Arial", size=10)
-            # Rij 1
-            pdf.cell(100, 6, txt=f"Brandstof/Laadkosten: EUR {brandstofkosten:,.2f}", ln=False)
-            pdf.cell(100, 6, txt=f"Zakelijke km: {zakelijke_km}", ln=True)
-            # Rij 2
-            pdf.cell(100, 6, txt=f"MRB: EUR {mrb:,.2f}", ln=False)
-            pdf.cell(100, 6, txt=f"Vergoeding: EUR 0.23/km", ln=True)
-            # Overige zakelijke rijen
-            pdf.cell(200, 6, txt=f"Onderhoud: EUR {onderhoud:,.2f}", ln=True)
-            pdf.cell(200, 6, txt=f"Verzekering: EUR {verzekering:,.2f}", ln=True)
-            pdf.cell(200, 6, txt=f"Overige kosten: EUR {overige:,.2f}", ln=True)
-            pdf.cell(200, 6, txt=f"Afschrijving: EUR {afschrijving:,.2f}", ln=True)
-            pdf.cell(200, 6, txt=f"Rente: EUR {rente:,.2f}", ln=True)
-            
-            pdf.line(10, pdf.get_y(), 100, pdf.get_y())
+            pdf.cell(100, 8, txt="Auto zakelijk", ln=False)
+            pdf.cell(100, 8, txt="Auto prive", ln=True)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
             pdf.ln(2)
             
+            pdf.set_font("Arial", '', 10)
+            
+            def row(label1, val1, label2="", val2=""):
+                pdf.cell(60, 6, txt=label1, ln=False)
+                pdf.cell(40, 6, txt=val1, ln=False)
+                pdf.cell(60, 6, txt=label2, ln=False)
+                pdf.cell(40, 6, txt=val2, ln=True)
+
+            row("Laadkosten:", f"EUR {laadkosten:,.2f}", "Vergoeding:", "EUR 0,23")
+            row("Brandstofkosten:", f"EUR {brandstofkosten:,.2f}", "Zakelijke km:", str(zakelijke_km))
+            row("Motorrijtuigenbelasting:", f"EUR {mrb:,.2f}")
+            row("Onderhoud:", f"EUR {onderhoud:,.2f}")
+            row("Verzekering:", f"EUR {verzekering:,.2f}")
+            row("Overige autokosten:", f"EUR {overige:,.2f}")
+            row("Afschrijving:", f"EUR {afschrijving:,.2f}")
+            row("Leasebedrag all-in:", f"EUR {leasebedrag:,.2f}")
+            
+            pdf.ln(2)
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(200, 6, txt=f"Totale autokosten: EUR {totale_kosten:,.2f}", ln=True)
-            pdf.cell(200, 6, txt=f"Minus Bijtelling: EUR -{bijtelling_bedrag:,.2f}", ln=True)
+            row("Totale autokosten:", f"EUR {totale_kosten:,.2f}")
+            pdf.set_font("Arial", '', 10)
+            row("Bijtelling:", f"EUR {bijtelling_bedrag:,.2f}")
             
-            pdf.ln(5)
+            pdf.ln(2)
+            pdf.set_font("Arial", 'B', 10)
+            row("Fiscale aftrekpost:", f"EUR {aftrek_zakelijk:,.0f}", "Fiscale aftrekpost:", f"EUR {aftrek_prive:,.0f}")
+            pdf.ln(8)
+            
+            # Advies
             pdf.set_font("Arial", 'B', 12)
-            pdf.cell(100, 8, txt=f"Fiscale aftrekpost Zakelijk: EUR {aftrek_zakelijk:,.2f}", ln=False)
-            pdf.cell(100, 8, txt=f"Fiscale aftrekpost Prive: EUR {aftrek_prive:,.2f}", ln=True)
-            
-            pdf.ln(10)
             pdf.set_text_color(*oranje)
-            pdf.cell(200, 10, txt=f"Advies: ZAKELIJK is {advies}.", ln=True)
+            pdf.cell(200, 8, txt=f"Advies vanuit fiscaal oogpunt: {advies}", ln=True)
+            pdf.ln(5)
+            
+            # Aandachtspunten
+            pdf.set_text_color(*zwart)
+            pdf.set_font("Arial", 'B', 10)
+            pdf.cell(200, 6, txt="Aandachtspunten bij zakelijk rijden:", ln=True)
+            pdf.set_font("Arial", '', 9)
+            pdf.cell(200, 5, txt="- verschillende kostenposten zijn gebaseerd op een schatting", ln=True)
+            pdf.cell(200, 5, txt="- rekening houden met vervallen van rente op de lening", ln=True)
+            pdf.cell(200, 5, txt="- na 5 jaar vervallen de afschrijvingskosten", ln=True)
+            pdf.cell(200, 5, txt="- bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming", ln=True)
+            pdf.cell(200, 5, txt="- percentage bijtelling geldt voor 60 maanden vanaf datum eerste toelating (n.v.t. bij een youngtimer)", ln=True)
             
             # Output PDF
             pdf_bytes = pdf.output(dest='S').encode('latin-1')
