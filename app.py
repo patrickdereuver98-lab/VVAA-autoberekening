@@ -265,6 +265,7 @@ if kenteken_input:
             st.markdown("---")
             st.markdown("### 💶 Financiële Specificaties")
             
+            # --- FINANCIELE SPECIFICATIES ---
             col1, col2, col3 = st.columns(3)
             
             with col1:
@@ -312,7 +313,8 @@ if kenteken_input:
                 if is_ev:
                     if not is_brandstof: st.info("ℹ️ Stroomverbruik onbekend. Vul zelf in (bijv. 18.0).")
                     verbruik_kwh = st.number_input("Verbruik Stroom (kWh/100km)", value=0.0)
-                    calc_laad = ((z_km + p_km) / 100) * verbruik_kwh * 0.40
+                    price_kwh = 0.40
+                    calc_laad = ((z_km + p_km) / 100) * verbruik_kwh * price_kwh
                     laad_kosten = float(round(calc_laad))
                     laad_kosten = st.number_input("Laadkosten p/j (€)", value=laad_kosten)
                 
@@ -335,9 +337,10 @@ if kenteken_input:
                 calc_onderhoud = round(totaal_km * 0.04) if gebruik_schatting else 0
                 
                 onderhoud = st.number_input("Onderhoud (€ / jaar)", value=float(calc_onderhoud))
-                verzekering = st.number_input("Verzekering (€ / jaar)", value=0.0)
+                verzekering = st.number_input("Verzekering (€ / jaar)", value=0.0, help="Te persoonlijk om in te schatten. Vul uw eigen premie in.")
                 overige = st.number_input("Overige kosten (€ / jaar)", value=250.0 if gebruik_schatting else 0.0)
                 
+                # Nieuwe Lease / Rente velden (afhankelijk van top vinkje)
                 lease_kosten = 0.0
                 rente_kosten = 0.0
                 if is_geleased:
@@ -359,6 +362,7 @@ if kenteken_input:
         pri_aftrek = round(z_km * 0.23)
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
+        # CARD 3: Resultaat
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
@@ -382,7 +386,7 @@ if kenteken_input:
                 st.markdown("#### 🏠 Auto Privé")
                 st.write(f"Vergoeding: **€ 0,23 per zakelijke km**")
                 st.write(f"Aantal zakelijke km: **{fmt(z_km)}**")
-                st.write("<br>", unsafe_allow_html=True)
+                st.write("<br>", unsafe_allow_html=True) # Witregel voor uitlijning
                 st.metric("Fiscale Aftrekpost", f"€ {fmt(pri_aftrek)}")
 
         if gevalideerd:
@@ -404,11 +408,11 @@ if kenteken_input:
                     if os.path.exists(logo): self.image(logo, 10, 20, 35)
                     self.set_xy(10, 32); 
                     self.set_font(self.font_fam, '', 10); 
-                    self.cell(0, 10, clean("In het hart van de gezondheidszorg."), ln=True)
+                    self.cell(0, 10, "In het hart van de gezondheidszorg.", ln=True)
                     
                 def footer(self):
                     self.set_y(-15); self.set_fill_color(0, 49, 92); self.rect(0, 282, 210, 15, 'F')
-                    self.set_text_color(255); self.set_font(self.font_fam, '', 9); self.cell(0, 15, clean("VvAA | www.vvaa.nl | Voor zorgverleners, door zorgverleners"), align='C', ln=True)
+                    self.set_text_color(255); self.set_font(self.font_fam, '', 9); self.cell(0, 15, "VvAA | www.vvaa.nl | Voor zorgverleners, door zorgverleners", align='C', ln=True)
 
             pdf = VVAAPDF(); pdf.set_auto_page_break(auto=False); pdf.add_page()
             f = pdf.font_fam
@@ -457,7 +461,6 @@ if kenteken_input:
                     ("Rentekosten:", f"EUR {fmt(rente_kosten)}")
                 ])
             
-            # FIX: Prive kilometers verwijderd uit overzicht
             right_col = [("Vergoeding:", f"EUR {fmt(pri_aftrek)}"), ("Zakelijke km:", fmt(z_km)), ("Tarief p/km:", "EUR 0,23")]
             
             max_rows = max(len(left_col), len(right_col))
