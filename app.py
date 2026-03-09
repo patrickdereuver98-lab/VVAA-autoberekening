@@ -6,57 +6,64 @@ from fpdf import FPDF
 from dateutil.relativedelta import relativedelta
 
 # --- 1. VvAA HUISSTIJL & CONFIGURATIE ---
-# VvAA Kleuren gebaseerd op de stijlgids
-VVAA_ORANJE_HEX = "#E84E0F"
-VVAA_BLAUW_HEX = "#00315C"
-VVAA_GRIJS_HEX = "#F4F4F4"
+VVAA_ORANJE = "#E84E0F"
+VVAA_BLAUW = "#00315C"
+VVAA_GRIJS = "#F4F4F4"
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
 
 vvaa_css = f"""
 <style>
-    /* Algemene typografie en headers */
-    h1, h2, h3, h4 {{ color: {VVAA_ORANJE_HEX}; font-family: 'Arial', sans-serif; }}
+    /* Algemene App Achtergrond en Tekstkleur */
+    .stApp {{
+        background-color: #ffffff;
+    }}
+    
+    /* Titels en labels in VvAA Blauw of Oranje */
+    h1, h2, h3, h4 {{ color: {VVAA_ORANJE}; font-family: 'Arial', sans-serif; }}
+    p, label, .stMarkdown {{ color: {VVAA_BLAUW} !important; }}
     
     /* Primaire knop (Berekenen/Acties) */
     .stButton>button {{ 
-        background-color: {VVAA_ORANJE_HEX}; 
-        color: white; 
+        background-color: {VVAA_ORANJE}; 
+        color: white !important; 
         border-radius: 4px; 
         border: none; 
         padding: 10px 24px; 
         font-weight: bold; 
-        transition: 0.3s;
     }}
-    .stButton>button:hover {{ background-color: #c73e07; color: white; }}
+    .stButton>button:hover {{ background-color: #c73e07; }}
     
     /* Secundaire knop (Download PDF) */
     .stDownloadButton>button {{ 
-        background-color: {VVAA_BLAUW_HEX}; 
-        color: white; 
+        background-color: {VVAA_BLAUW}; 
+        color: white !important; 
         width: 100%;
         font-size: 16px;
     }}
-    .stDownloadButton>button:hover {{ background-color: #001f3b; color: white; }}
+    .stDownloadButton>button:hover {{ background-color: #001f3b; }}
     
-    /* Info boxen */
-    div[data-testid="stAlert"] {{ background-color: {VVAA_GRIJS_HEX}; border-left: 5px solid {VVAA_ORANJE_HEX}; }}
+    /* Info boxen & Waarschuwingen (Zorgt dat tekst leesbaar is!) */
+    div[data-testid="stAlert"] {{ 
+        background-color: {VVAA_GRIJS}; 
+        border-left: 5px solid {VVAA_ORANJE}; 
+    }}
+    div[data-testid="stAlert"] div, div[data-testid="stAlert"] p, div[data-testid="stAlert"] span {{
+        color: {VVAA_BLAUW} !important;
+    }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
 
-# Logo weergave in de app
-col_logo, col_title = st.columns([1, 4])
-with col_logo:
-    if os.path.exists("vvaa_logo.png"):
-        st.image("vvaa_logo.png", use_container_width=True)
-with col_title:
-    st.title("Autoberekening zakelijk of privé?")
-    st.write(f"***In het hart van de gezondheidszorg.***")
+# Logo netjes linksboven (kleiner formaat)
+if os.path.exists("vvaa_logo.jpg"):
+    st.image("vvaa_logo.jpg", width=200)
 
+st.title("Autoberekening zakelijk of privé?")
+st.write(f"***In het hart van de gezondheidszorg.***")
 st.markdown("---")
 
-# --- 2. RDW API FUNCTIE (MET VERBRUIK) ---
+# --- 2. RDW API FUNCTIE ---
 @st.cache_data
 def get_rdw_data(kenteken):
     kenteken = kenteken.replace("-", "").upper()
@@ -124,11 +131,14 @@ def bepaal_standaard_bijtelling_index(bouwjaar, is_ev, is_youngtimer):
 # --- 3. KLANTGEGEVENS & VALIDATIE ---
 st.subheader("1. Klant & Voertuig Gegevens")
 colA, colB, colC = st.columns(3)
-with colA: klant_naam = st.text_input("Naam relatie *")
-with colB: klant_nummer = st.text_input("Relatienummer (alleen cijfers) *")
-with colC: kenteken_input = st.text_input("Kenteken (bijv. AB-123-C) *")
-
-provincie = st.selectbox("Provincie (voor Wegenbelasting)", ["Drenthe", "Flevoland", "Friesland", "Gelderland", "Groningen", "Limburg", "Noord-Brabant", "Noord-Holland", "Overijssel", "Utrecht", "Zeeland", "Zuid-Holland"])
+with colA: 
+    klant_naam = st.text_input("Naam relatie *")
+with colB: 
+    klant_nummer = st.text_input("Relatienummer (alleen cijfers) *")
+with colC: 
+    kenteken_input = st.text_input("Kenteken (bijv. AB-123-C) *")
+    # Provincie subtieler weggewerkt bij de kenteken invoer
+    provincie = st.selectbox("Provincie (voor Wegenbelasting)", ["Drenthe", "Flevoland", "Friesland", "Gelderland", "Groningen", "Limburg", "Noord-Brabant", "Noord-Holland", "Overijssel", "Utrecht", "Zeeland", "Zuid-Holland"])
 
 is_valid_naam = bool(klant_naam) and not klant_naam.replace(" ", "").isdigit()
 is_valid_nummer = bool(klant_nummer) and klant_nummer.isdigit()
@@ -254,15 +264,14 @@ if kenteken_input:
         if gevalideerd and st.button("Genereer PDF Rapport (VvAA Stijl)"):
             def clean_text(text): return str(text).replace('€', 'EUR').encode('latin-1', 'replace').decode('latin-1')
 
-            # PDF Klasse met ingebouwde Header & Footer
             class VVAAPDF(FPDF):
                 def header(self):
-                    # VvAA Oranje Balk bovenaan
-                    self.set_fill_color(232, 78, 15) # RGB voor VvAA Oranje
+                    self.set_fill_color(232, 78, 15)
                     self.rect(0, 0, 210, 15, 'F')
                     
-                    if os.path.exists("vvaa_logo.png"):
-                        self.image("vvaa_logo.png", x=10, y=20, w=40)
+                    # Aangepast naar .jpg
+                    if os.path.exists("vvaa_logo.jpg"):
+                        self.image("vvaa_logo.jpg", x=10, y=20, w=35)
                     else:
                         self.set_font("Arial", 'B', 24)
                         self.set_text_color(232, 78, 15)
@@ -277,7 +286,7 @@ if kenteken_input:
 
                 def footer(self):
                     self.set_y(-25)
-                    self.set_fill_color(0, 49, 92) # RGB voor VvAA Blauw
+                    self.set_fill_color(0, 49, 92)
                     self.rect(0, 282, 210, 15, 'F')
                     self.set_text_color(255, 255, 255)
                     self.set_font("Arial", '', 9)
@@ -291,14 +300,12 @@ if kenteken_input:
             zwart = (0, 0, 0)
             licht_grijs = (245, 245, 245)
             
-            # Titel Rapport
             pdf.set_font("Arial", 'B', 18)
             pdf.set_text_color(*blauw)
             pdf.cell(200, 10, txt="Autoberekening: Zakelijk of Privé?", ln=True)
             pdf.line(10, pdf.get_y(), 200, pdf.get_y())
             pdf.ln(8)
             
-            # Klant Info Blok
             pdf.set_text_color(*zwart)
             pdf.set_font("Arial", '', 10)
             pdf.cell(40, 6, txt="Naam relatie:", ln=False)
@@ -309,7 +316,6 @@ if kenteken_input:
             pdf.cell(100, 6, txt=datetime.datetime.now().strftime("%d-%m-%Y"), ln=True)
             pdf.ln(8)
             
-            # Auto Info met lichtgrijze achtergrond (cleaner dan oranje)
             pdf.set_fill_color(*licht_grijs)
             pdf.cell(50, 7, txt=" Merk auto:", ln=False, fill=True)
             pdf.cell(140, 7, txt=clean_text(auto['merk']), ln=True, fill=True)
@@ -323,7 +329,6 @@ if kenteken_input:
             pdf.cell(140, 7, txt=f"{auto['rdw_verbruik_liter']} L/100km", ln=True, fill=True)
             pdf.ln(5)
             
-            # Waardes
             pdf.cell(50, 6, txt="Cataloguswaarde:", ln=False)
             pdf.cell(100, 6, txt=f"EUR {auto['catalogusprijs']:,.0f}", ln=True)
             pdf.cell(50, 6, txt="Aanschafwaarde:", ln=False)
@@ -334,7 +339,6 @@ if kenteken_input:
             pdf.set_font("Arial", '', 10)
             pdf.ln(10)
             
-            # Financiële Tabel Header
             pdf.set_font("Arial", 'B', 12)
             pdf.set_text_color(*oranje)
             pdf.cell(95, 8, txt="Auto zakelijk", ln=False, border='B')
@@ -342,7 +346,6 @@ if kenteken_input:
             pdf.cell(85, 8, txt="Auto privé", ln=True, border='B')
             pdf.ln(3)
             
-            # Tabel Rijen
             pdf.set_text_color(*zwart)
             pdf.set_font("Arial", '', 10)
             def row(label1, val1, label2="", val2=""):
@@ -379,13 +382,11 @@ if kenteken_input:
             pdf.cell(40, 8, txt=f"EUR {aftrek_prive:,.0f}", ln=True, fill=True)
             pdf.ln(10)
             
-            # Advies Blok
             pdf.set_font("Arial", 'B', 14)
             pdf.set_text_color(*blauw)
             pdf.cell(200, 8, txt=clean_text(f"Advies vanuit fiscaal oogpunt: {advies}"), ln=True)
             pdf.ln(5)
             
-            # Aandachtspunten
             pdf.set_text_color(*zwart)
             pdf.set_font("Arial", 'B', 10)
             pdf.cell(200, 6, txt="Aandachtspunten bij zakelijk rijden:", ln=True)
