@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 # --- 1. VvAA HUISSTIJL & CONFIGURATIE ---
 VVAA_ORANJE = "#E84E0F"
 VVAA_BLAUW = "#00315C"
-VVAA_LICHTORANJE = "#F9E8DF" # Iets donkerdere oranje/zand tint cf. huisstijl
+VVAA_LICHTORANJE = "#F9E8DF" # Subtiele donkerdere oranje/zand tint cf. huisstijl
 VVAA_GRIJS = "#F4F6F8" 
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
@@ -36,45 +36,45 @@ vvaa_css = f"""
     /* --- 3. MODERNE CARDS (Witte vlakken) --- */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         background-color: #FFFFFF !important;
-        border: 1px solid #F0D5C9 !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 15px rgba(232, 78, 15, 0.06) !important;
+        border: none !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 15px rgba(0, 49, 92, 0.05) !important;
         padding: 15px !important;
     }}
 
     /* --- 4. FIX VOOR INPUTVELDEN & DROPDOWNS --- */
-    /* Zorgt ervoor dat tekstinvoer blauw is en de achtergrond wit */
-    input {{
+    /* Zorgt ervoor dat invoervelden (tekst en nummers) een witte achtergrond hebben */
+    div[data-baseweb="input"] {{
+        background-color: #FFFFFF !important;
+        border-radius: 6px !important;
+    }}
+    div[data-baseweb="input"] input {{
         color: {VVAA_BLAUW} !important;
         background-color: #FFFFFF !important;
     }}
     
-    /* Focus state voor input */
-    div[data-baseweb="input"] > div:focus-within {{
-        border-color: {VVAA_ORANJE} !important;
-        box-shadow: 0 0 0 1px {VVAA_ORANJE} !important;
-    }}
-
-    /* Specifieke fix voor Dropdowns zodat deze ALTIJD wit/blauw zijn */
+    /* Dropdown specifieke fix */
     div[data-baseweb="select"] > div {{ 
         background-color: #FFFFFF !important; 
         color: {VVAA_BLAUW} !important; 
         border-radius: 6px !important; 
-        border: 1px solid #D1D8E0 !important; 
     }}
-    div[data-baseweb="select"] > div:focus-within {{
+    div[data-baseweb="select"] span, div[data-baseweb="select"] div {{ color: {VVAA_BLAUW} !important; }}
+    
+    /* Focus state voor alle velden */
+    div[data-baseweb="input"]:focus-within, div[data-baseweb="select"] > div:focus-within {{
         border-color: {VVAA_ORANJE} !important;
         box-shadow: 0 0 0 1px {VVAA_ORANJE} !important;
     }}
-    div[data-baseweb="select"] span {{ color: {VVAA_BLAUW} !important; }}
-    
-    /* Dropdown menu lijsten (popovers) */
-    div[data-baseweb="popover"], div[data-baseweb="popover"] > div, ul[role="listbox"] {{ background-color: #FFFFFF !important; border: 1px solid #D1D8E0 !important; }}
+
+    /* Dropdown menu lijsten (popovers) - Wit met blauwe tekst */
+    div[data-baseweb="popover"], div[data-baseweb="popover"] > div, ul[role="listbox"] {{ 
+        background-color: #FFFFFF !important; 
+    }}
     ul[role="listbox"] li {{ color: {VVAA_BLAUW} !important; background-color: #FFFFFF !important; }}
     ul[role="listbox"] li:hover {{ background-color: {VVAA_LICHTORANJE} !important; color: {VVAA_ORANJE} !important; }}
 
-    /* --- 5. BUTTONS --- */
-    /* Reken knop */
+    /* --- 5. KNOPPEN (BUTTONS) --- */
     .stButton>button {{ 
         background-color: {VVAA_ORANJE} !important; color: white !important; 
         border-radius: 6px; border: none; padding: 10px 24px; font-weight: bold; width: 100%; margin-top: 28px;
@@ -83,7 +83,6 @@ vvaa_css = f"""
     .stButton>button:hover {{ background-color: #C7400A !important; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(232, 78, 15, 0.3) !important; }}
     .stButton>button p, .stButton>button span {{ color: white !important; }}
     
-    /* Download knop */
     div.stDownloadButton > button {{ 
         background-color: {VVAA_BLAUW} !important; color: white !important; border-radius: 8px !important;
         padding: 15px 32px !important; font-size: 18px !important; font-weight: bold !important; width: 100% !important;
@@ -93,16 +92,17 @@ vvaa_css = f"""
     div.stDownloadButton > button:hover {{ background-color: #001F3F !important; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 49, 92, 0.25) !important; }}
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
     
-    /* --- 6. MELDINGEN & ALERTS --- */
+    /* --- 6. MELDINGEN & ALERTS (Strak Oranje met witte tekst) --- */
     div[data-testid="stAlert"] {{ 
-        background-color: #FFFFFF !important; 
-        border-left: 5px solid {VVAA_ORANJE} !important; 
+        background-color: {VVAA_ORANJE} !important; 
+        border: none !important; 
         padding: 15px; 
         border-radius: 6px; 
-        box-shadow: 0 2px 5px rgba(0,0,0,0.03); 
-        border: 1px solid #E0E6ED;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
     }}
+    div[data-testid="stAlert"] * {{ color: #FFFFFF !important; }}
     
+    /* --- 7. EXPANDER --- */
     div[data-testid="stExpander"] {{ 
         background-color: #FFFFFF !important; 
         border-left: 4px solid {VVAA_ORANJE} !important; 
@@ -111,13 +111,13 @@ vvaa_css = f"""
     }}
     .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
 
-    /* --- 7. RESULTATEN BOXEN --- */
+    /* --- 8. RESULTATEN BOXEN --- */
     div[data-testid="metric-container"] {{
         background-color: #FFFFFF; border-left: 5px solid {VVAA_ORANJE}; padding: 15px 20px; 
         border-radius: 8px; box-shadow: 0px 4px 10px rgba(0, 49, 92, 0.05); border: 1px solid #E0E6ED;
     }}
-    div[data-testid="metric-container"] label {{ font-size: 15px !important; font-weight: bold; color: #555 !important; }}
-    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{ color: {VVAA_BLAUW} !important; font-weight: 900; font-size: 28px !important; }}
+    div[data-testid="metric-container"] label {{ font-size: 15px !important; font-weight: bold; color: {VVAA_BLAUW} !important; }}
+    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{ color: {VVAA_ORANJE} !important; font-weight: 900; font-size: 28px !important; }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
@@ -158,10 +158,8 @@ col_logo, col_title = st.columns([1, 5])
 with col_logo:
     logo_path = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
     if os.path.exists(logo_path):
-        # Vaste breedte voorkomt enorme witte blokken als het een JPG is
-        st.image(logo_path, width=150)
+        st.image(logo_path, width=130) # Iets breder voor mooie uitlijning
 with col_title:
-    # Strakkere H2 titel, mooi uitgelijnd met het logo
     st.markdown(f"<h2 style='color: {VVAA_BLAUW}; margin: 0; padding-top: 15px;'>Autoberekening: Zakelijk of Privé?</h2>", unsafe_allow_html=True)
 st.markdown(f"<hr style='border: 2px solid {VVAA_ORANJE}; border-radius: 5px; margin-top: 10px; margin-bottom: 30px;'>", unsafe_allow_html=True)
 
@@ -236,7 +234,6 @@ def bepaal_bijtelling_index(peil_jaar, is_full_ev, is_youngtimer):
     else: return 7
 
 # --- 6. INTERFACE / CARDS ---
-
 with st.container(border=True):
     st.markdown("### 👤 1. Relatiegegevens")
     colA, colB = st.columns(2)
@@ -379,10 +376,10 @@ if kenteken_input:
                 mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
                 mrb = st.number_input("Wegenbelasting (€ / jaar)", value=int(mrb_jaar))
                 
-                # EMOJI BUG FIX
                 gebruik_schatting = st.checkbox("🧮 Bereken schatting voor vaste kosten", value=False)
                 if gebruik_schatting:
-                    with st.expander("ℹ️ Uitleg vaste kosten schatting"):
+                    # Emoji naam gefikst om overlap met Streamlit pijltje te voorkomen
+                    with st.expander("Uitleg vaste kosten schatting"):
                         st.write("""
                         - **Onderhoud:** € 0,04 per gereden kilometer (totaal).
                         - **Verzekering:** Blijft op € 0, vul uw eigen premie in.
@@ -401,7 +398,7 @@ if kenteken_input:
                 rente_kosten = 0.0
                 if is_geleased:
                     st.markdown("#### Financiering")
-                    st.caption("ℹ️ *Let op: bij Operational Lease zijn zaken als wegenbelasting, onderhoud en verzekering vaak al inbegrepen. Zet die velden hierboven dan op 0 euro.*")
+                    st.caption("ℹ️ *Bij Operational Lease zijn Wegenbelasting, Onderhoud en Verzekering vaak al inbegrepen. Zet deze hierboven dan op € 0.*")
                     lease_kosten = st.number_input("Leasekosten (Operational/Private) (€/j)", value=0.0)
                     rente_kosten = st.number_input("Rentekosten lening (Financial) (€/j)", value=0.0)
 
@@ -458,7 +455,6 @@ if kenteken_input:
                     self.set_fill_color(232, 78, 15); self.rect(0, 0, 210, 15, 'F')
                     logo = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
                     if os.path.exists(logo): self.image(logo, 10, 20, 35)
-                    # Slogan verwijderd
                     
                 def footer(self):
                     self.set_y(-15); self.set_fill_color(0, 49, 92); self.rect(0, 282, 210, 15, 'F')
