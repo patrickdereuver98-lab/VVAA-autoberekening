@@ -17,6 +17,7 @@ VVAA_MELDING_ORANJE = "#FDCEA8"
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
 
+# CSS is enorm opgeschoond omdat config.toml nu het zware werk doet!
 vvaa_css = f"""
 <style>
     /* --- 1. ALGEMENE SCALING --- */
@@ -283,10 +284,9 @@ if kenteken_input:
                 with st.expander("ℹ️ Uitleg Waarde & Bijtelling"):
                     st.write("Selecteer het juiste bijtellingsprofiel. De berekende bijtelling wordt automatisch gemaximeerd (afgetopt) als deze onverhoopt hoger uitvalt dan de totale werkelijke autokosten.")
                 
-                # Kleur toegevoegd aan de div zodat deze altijd netjes blauw blijft en niet grijs wordt
-                st.markdown(f"<div style='height: 35px; display: flex; align-items: center; color: {VVAA_BLAUW};'><strong>Cataloguswaarde (RDW):</strong>&nbsp;€ {fmt(auto['catalogusprijs'])}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='height: 35px; display: flex; align-items: center;'><strong>Cataloguswaarde (RDW):</strong>&nbsp;€ {fmt(auto['catalogusprijs'])}</div>", unsafe_allow_html=True)
                 
-                aanschaf = st.number_input("Aanschafprijs / Taxatiewaarde (€)", value=int(auto['catalogusprijs']))
+                aanschaf = st.number_input("Aanschafwaarde / Dagwaarde (€)", value=int(auto['catalogusprijs']))
                 
                 idx_bijt = bepaal_bijtelling_index(peil_jaar, is_full_ev, is_young_manual)
                 gekozen_bijt = st.selectbox("Bijtellingsprofiel", BIJTELLING_OPTIES, index=idx_bijt)
@@ -317,7 +317,7 @@ if kenteken_input:
                     if auto['rdw_verbruik'] == 0.0:
                         st.info("ℹ️ RDW verbruik onbekend. Vul zelf in.")
                     
-                    st.markdown(f"<div style='height: 35px; display: flex; align-items: center; color: {VVAA_BLAUW};'>Actuele brandstofprijzen ingeladen.</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Actuele brandstofprijzen ingeladen.</div>", unsafe_allow_html=True)
                     verbruik_l = st.number_input("Verbruik (L/100km)", value=float(auto['rdw_verbruik']))
                     
                     bs_lower = [b.lower() for b in auto['brandstoffen']]
@@ -332,7 +332,7 @@ if kenteken_input:
                 
                 if is_ev:
                     if not is_brandstof: st.info("ℹ️ Stroomverbruik onbekend. Vul zelf in (bijv. 18.0).")
-                    st.markdown(f"<div style='height: 35px; display: flex; align-items: center; color: {VVAA_BLAUW};'>Stroomprijs berekend op € 0,40 / kWh.</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Stroomprijs berekend op € 0,40 / kWh.</div>", unsafe_allow_html=True)
                     verbruik_kwh = st.number_input("Verbruik Stroom (kWh/100km)", value=0.0)
                     price_kwh = 0.40
                     calc_laad = ((z_km + p_km) / 100) * verbruik_kwh * price_kwh
@@ -461,7 +461,7 @@ if kenteken_input:
             pdf.cell(35, 6, " Lease auto:", fill=True); pdf.cell(155, 6, "Ja" if is_geleased else "Nee", fill=True, ln=True); pdf.ln(2)
             
             pdf.cell(45, 5, "Cataloguswaarde:"); pdf.cell(45, 5, clean(f"EUR {fmt(auto['catalogusprijs'])}"), align='R')
-            pdf.cell(10, 5); pdf.cell(45, 5, "Aanschaf/Taxatie:"); pdf.cell(45, 5, clean(f"EUR {fmt(aanschaf)}"), align='R', ln=True)
+            pdf.cell(10, 5); pdf.cell(45, 5, "Aanschafwaarde:"); pdf.cell(45, 5, clean(f"EUR {fmt(aanschaf)}"), align='R', ln=True)
             pdf.cell(45, 5, "Bijtellingsprofiel:"); pdf.set_font(f, '', 9); pdf.cell(145, 5, clean(gekozen_bijt), ln=True); pdf.ln(3)
 
             pdf.set_font(f, 'B', 11); pdf.set_text_color(232, 78, 15)
