@@ -95,13 +95,46 @@ def get_rdw_data(kenteken):
     except:
         return None
 
+# --- NIEUWE, ACCURATERE MRB FUNCTIE ---
 def schat_mrb(gewicht, brandstof_is_ev, brandstof_is_diesel, provincie):
-    gewichtsklasse = max(0, (gewicht - 500) // 100)
-    basis_jaar = 150 + (gewichtsklasse * 135) 
-    if brandstof_is_ev: basis_jaar = basis_jaar * 0.25 
-    elif brandstof_is_diesel: basis_jaar = basis_jaar * 2.20 
-    provincie_factoren = {"Noord-Holland": 0.95, "Zuid-Holland": 1.12, "Gelderland": 1.05, "Drenthe": 1.08, "Groningen": 1.06, "Friesland": 1.04, "Overijssel": 1.03, "Flevoland": 1.02, "Utrecht": 1.00, "Zeeland": 1.04, "Noord-Brabant": 1.03, "Limburg": 1.05}
-    return basis_jaar * provincie_factoren.get(provincie, 1.05)
+    # Exacte schalen Belastingdienst (gemiddelde basistarieven 2024/2025 per jaar)
+    if gewicht <= 550: basis = 160
+    elif gewicht <= 650: basis = 184
+    elif gewicht <= 750: basis = 216
+    elif gewicht <= 850: basis = 284
+    elif gewicht <= 950: basis = 400
+    elif gewicht <= 1050: basis = 476
+    elif gewicht <= 1150: basis = 568
+    elif gewicht <= 1250: basis = 656
+    elif gewicht <= 1350: basis = 744
+    elif gewicht <= 1450: basis = 836
+    elif gewicht <= 1550: basis = 924
+    elif gewicht <= 1650: basis = 1012
+    elif gewicht <= 1750: basis = 1104
+    elif gewicht <= 1850: basis = 1192
+    elif gewicht <= 1950: basis = 1284
+    elif gewicht <= 2050: basis = 1372
+    elif gewicht <= 2150: basis = 1464
+    elif gewicht <= 2250: basis = 1552
+    elif gewicht <= 2350: basis = 1644
+    elif gewicht <= 2450: basis = 1732
+    elif gewicht <= 2550: basis = 1820
+    else: basis = 2000
+    
+    # Brandstof correcties (2025 normen)
+    if brandstof_is_ev: 
+        basis = basis * 0.25 # 75% korting voor EV in 2025
+    elif brandstof_is_diesel: 
+        basis = basis * 2.15 # Dieseltoeslag inclusief fijnstof
+        
+    # Provinciale nuances
+    provincie_factoren = {
+        "Noord-Holland": 0.95, "Zuid-Holland": 1.05, "Gelderland": 1.02, 
+        "Drenthe": 1.03, "Groningen": 1.02, "Friesland": 1.01, 
+        "Overijssel": 1.01, "Flevoland": 1.00, "Utrecht": 0.98, 
+        "Zeeland": 1.02, "Noord-Brabant": 1.01, "Limburg": 1.03
+    }
+    return basis * provincie_factoren.get(provincie, 1.00)
 
 BIJTELLING_OPTIES = [
     "22% over Cataloguswaarde (Standaard)", "35% over Aanschafwaarde (Youngtimer >15 jaar)",
@@ -196,22 +229,20 @@ if kenteken_input:
             overige = st.number_input("Overige autokosten (€)", value=500)
             leasebedrag = st.number_input("Leasebedrag all-in / Rente (€)", value=0)
             
-            # --- HIER IS HET UITGEBREIDE UITKLAPMENU WEER TERUG! ---
-            with st.expander("ℹ️ Hoe schatten we deze kosten? (Lees meer)"):
+            with st.expander("ℹ️ Hoe schatten we deze kosten?"):
                 st.markdown("""
                 **VASTE KOSTEN**
-                * **Afschrijving:** Hoe ouder de auto wordt, hoe minder hij waard is. Voor dit bedrag gaan we uit van een afschrijvingstabel die veel gebruikt wordt door autohandelaren (20% afschrijving minus restwaarde).
-                * **Wegenbelasting:** De hoogte hangt af van in welke provincie u woont, welke brandstof de auto verbruikt en het gewicht.
-                * **Verzekering:** Hangt af van risico, gewicht, dagwaarde en uw schadevrije jaren. Ook uw leeftijd en gekozen dekking (WA/WA+/All Risk) speelt mee. Wij laten hier een gemiddelde premie zien.
+                * **Afschrijving:** 20% afschrijving minus restwaarde.
+                * **Wegenbelasting:** Afhankelijk van provincie, brandstof en gewicht.
+                * **Verzekering:** Afhankelijk van risico, gewicht, dagwaarde en schadevrije jaren.
 
-                **VARIABELE KOSTEN (Reparatie en onderhoud)**
-                We maken een inschatting van de kosten voor reparatie en onderhoud, rekening houdend met de leeftijd en het aantal verwachte kilometers. Hieronder een lijstje met reparaties waar u rekening mee kan houden:
-                * **Distributieriem:** Bij de meeste merken elke 4 tot 6 jaar of elke 60.000 tot 120.000 km. Kosten lopen uiteen van € 300,- tot € 1.000,-.
-                * **Koppelingsplaten:** Rijdt u veel korte afstanden door de stad of in de file? Dat zorgt voor veel slijtage.
-                * **Uitlaat:** Na een jaar of 10 bestaat de kans dat er een deel 'lek' gaat of gaat roesten.
-                * **Remschijven en -blokken:** Meestal zijn na 75.000 km de remschijven aan de beurt (€ 300,- tot € 600,-).
-                * **Airconditioning:** Is de auto iets ouder? Dan is een jaarlijkse controle geen overbodige luxe (Gemiddeld € 150,-).
-                * **Banden:** Controleren zodra ze 5 jaar in gebruik zijn, en vervangen als ze 10 jaar oud zijn.
+                **VARIABELE KOSTEN (Onderhoud)**
+                * **Distributieriem:** € 300 - € 1.000 (elke 60k-120k km).
+                * **Koppelingsplaten:** Slijtage door veel korte ritten/files.
+                * **Uitlaat:** Na 10 jaar kans op roest/lekken.
+                * **Remschijven en -blokken:** € 300 - € 600 (vaak na 75.000 km).
+                * **Airconditioning:** Gemiddeld € 150 voor jaarlijkse controle.
+                * **Banden:** Controleren na 5 jaar, vervangen bij 10 jaar.
                 """)
 
         voldoet_aan_10_procent = (totaal_km == 0) or ((zakelijke_km / totaal_km) >= 0.10)
@@ -412,11 +443,4 @@ if kenteken_input:
             pdf.cell(200, 4, txt="- Houd rekening met het vervallen van de rente op de lening.", ln=True)
             pdf.cell(200, 4, txt="- Na 5 jaar vervallen de afschrijvingskosten.", ln=True)
             pdf.cell(200, 4, txt="- Bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming.", ln=True)
-            pdf.cell(200, 4, txt="- Percentage bijtelling geldt voor 60 maanden vanaf datum eerste toelating.", ln=True)
-            
-            st.download_button(
-                label="📄 Klik hier om het Definitieve Rapport te Downloaden",
-                data=pdf.output(dest='S').encode('latin-1'),
-                file_name=clean_text(f"VvAA_Autoberekening_{kenteken_input}.pdf"),
-                mime="application/pdf"
-            )
+            pdf.cell(200, 4, txt="- Percentage bijtelling geldt voor 60 maanden vanaf datum eerste to
