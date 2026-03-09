@@ -20,16 +20,20 @@ st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="w
 vvaa_css = f"""
 <style>
     /* --- 1. ALGEMENE SCALING & ACHTERGROND --- */
-    html, body, [class*="st-"] {{
+    html, body {{
         font-size: 0.92rem !important;
-        font-family: 'Arial', sans-serif !important;
     }}
     
-    .stApp {{ background-color: {VVAA_LICHTORANJE} !important; }}
+    .stApp {{ 
+        background-color: {VVAA_LICHTORANJE} !important; 
+        font-family: 'Arial', sans-serif;
+    }}
+    
+    /* Enkel kleur toepassen, font-family agressie weglaten om "_arro" icon bug te fixen */
     p, label, span, li {{ color: {VVAA_BLAUW} !important; }}
     
     /* --- 2. MODERNE HEADERS --- */
-    h1, h2, h3, h4, h5, h6 {{ color: {VVAA_BLAUW} !important; font-weight: bold !important; }}
+    h1, h2, h3, h4, h5, h6 {{ color: {VVAA_BLAUW} !important; font-weight: bold !important; font-family: 'Arial', sans-serif !important; }}
     h3 {{ border-bottom: 2px solid {VVAA_ORANJE} !important; padding-bottom: 8px !important; margin-bottom: 20px !important; font-size: 1.3rem !important; }}
     
     /* Uitlijning fix voor de kolommen */
@@ -336,11 +340,9 @@ if kenteken_input:
             with col1:
                 st.markdown("#### Waarde & Bijtelling")
                 
-                # Expander in elke kolom zorgt voor gelijke uitlijning van de rest eronder
                 with st.expander("ℹ️ Uitleg Waarde & Bijtelling"):
                     st.write("Selecteer het juiste bijtellingsprofiel. De berekende bijtelling wordt automatisch gemaximeerd (afgetopt) als deze onverhoopt hoger uitvalt dan de totale werkelijke autokosten.")
                 
-                # Vaste div hoogte voor de rest van de uitlijning
                 st.markdown(f"<div style='height: 35px; display: flex; align-items: center;'><strong>Cataloguswaarde (RDW):</strong>&nbsp;€ {fmt(auto['catalogusprijs'])}</div>", unsafe_allow_html=True)
                 
                 aanschaf = st.number_input("Aanschafwaarde / Dagwaarde (€)", value=int(auto['catalogusprijs']))
@@ -402,7 +404,6 @@ if kenteken_input:
                 with st.expander("ℹ️ Uitleg Kosten Schatting"):
                     st.write("- **Wegenbelasting:** Automatisch berekend o.b.v. RDW data en provincie.\n- **Onderhoud (schatting):** Berekent € 0,04 per gereden km.\n- **Overig (schatting):** Vaste aanname € 250,- per jaar.")
                 
-                # Checkbox uitgelijnd met de 35px divs van col1 en col2
                 gebruik_schatting = st.checkbox("🧮 Vaste kosten schatting toepassen?", value=False)
                 
                 mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
@@ -439,7 +440,6 @@ if kenteken_input:
                 
             st.success(f"**Conclusie:** Vanuit fiscaal oogpunt is de optie **{advies}**.")
             
-            # HTML zonder spaties aan de linkerkant om Markdown render bug te voorkomen
             html_result = f"""<div style='display: flex; gap: 20px; margin-top: 20px; margin-bottom: 20px; flex-wrap: wrap;'>
 <div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
 <h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; border: none; padding-top: 0;'><span style='font-size:1.2em;'>🏢</span> Auto Zakelijk</h4>
