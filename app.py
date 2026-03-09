@@ -49,7 +49,7 @@ def load_mrb_data():
         tarieven = pd.read_csv("mrb_tarieven_2026.csv")
         provincies = pd.read_csv("mrb_provincies_2026.csv")
         return tarieven, provincies
-    except Exception as e:
+    except Exception:
         return None, None
 
 df_mrb, df_prov = load_mrb_data()
@@ -87,7 +87,7 @@ def get_rdw_data(kenteken):
         }
     except: return None
 
-# --- 3. REKENLOGICA ---
+# --- 3. MRB REKENMETHODE ---
 def bereken_mrb_csv(gewicht, brandstoffen, provincie_naam):
     if df_mrb is None or df_prov is None: return 0
     trede = df_mrb[df_mrb['min_massa'] <= gewicht].iloc[-1]
@@ -97,14 +97,15 @@ def bereken_mrb_csv(gewicht, brandstoffen, provincie_naam):
         eenheden = math.ceil((gewicht - trede['drempel']) / 100)
         extra = eenheden * trede['toeslag_per_100kg']
     basis_totaal = basis_kwartaal + extra
-    opcenten = df_prov[df_prov['provincie'] == provincie_naam]['opcenten'].values[0]
+    opcenten_row = df_prov[df_prov['provincie'] == provincie_naam]
+    opcenten = opcenten_row['opcenten'].values[0] if not opcenten_row.empty else 85.0
     mrb_3mnd = basis_totaal + (basis_totaal * (opcenten / 100))
     toeslag = 0
     if any("diesel" in b for b in brandstoffen): toeslag = 86.16 + (max(0, gewicht-900)/100 * 16.57)
     elif any("lpg" in b for b in brandstoffen): toeslag = 172.08 + (max(0, gewicht-900)/100 * 18.22)
     jaarbedrag = (mrb_3mnd + toeslag) * 4
     if any("elektriciteit" in b for b in brandstoffen) and not any(x in ["benzine", "diesel"] for x in brandstoffen):
-        jaarbedrag *= 0.75 # EV korting 2026
+        jaarbedrag *= 0.75
     return round(jaarbedrag)
 
 BIJTELLING_OPTIES = [
@@ -135,9 +136,8 @@ with colC: kenteken_input = st.text_input("Kenteken *")
 with colD: 
     prov_lijst = df_prov['provincie'].tolist() if df_prov is not None else ["Gelderland"]
     prov = st.selectbox("Provincie", prov_lijst)
-with colE: bereken_knop = st.button("Berekenen")
+with colE: bereken_knop = st.button("Laden / Berekenen")
 
-# Validatie
 is_valid_nummer = klant_nummer.isdigit()
 gevalideerd = bool(klant_naam) and is_valid_nummer
 
@@ -150,50 +150,60 @@ if kenteken_input:
     auto = get_rdw_data(kenteken_input)
     if auto:
         toel_dt = datetime.datetime.strptime(auto['toelating'], "%Y-%m-%d")
-        leeftijd_exact = relativedelta(datetime.datetime.now(), toel_dt)
-        is_young = leeftijd_exact.years >= 15
+        leeftijd = relativedelta(datetime.datetime.now(), toel_dt)
+        is_young_auto = leeftijd.years >= 15
+        brandstof_tekst = ", ".join(auto['brandstoffen']).title()
         
-        mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
-        idx_bijt = bepaal_bijtelling_index(int(auto['toelating'][:4]), any("elektriciteit" in b for b in auto['brandstoffen']), is_young)
-        
-        st.success(f"**{auto['merk']} {auto['handelsbenaming']}** | {leeftijd_exact.years} jaar oud")
+        # Voertuigkop weergave zoals gevraagd
+        st.success(f"**{auto['merk']} ({kenteken_input.upper()}) - {auto['handelsbenaming']} - {brandstof_tekst} | {leeftijd.years} jaar en {leeftijd.months} maanden oud**")
         
         col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown("**Waarde & Bijtelling**")
             st.write(f"Cataloguswaarde (RDW): **€ {fmt(auto['catalogusprijs'])}**")
-            aanschaf = st.number_input("Aanschafwaarde (€)", value=int(auto['catalogusprijs']))
+            aanschaf = st.number_input("Aanschafwaarde / Dagwaarde (€)", value=int(auto['catalogusprijs']))
+            
+            is_young_manual = st.checkbox("Youngtimer regeling toepassen?", value=is_young_auto)
+            
+            # Youngtimer waarschuwing in het dashboard
+            if is_young_manual:
+                st.info("ℹ️ **Youngtimer-regeling:** Omdat de auto 15 jaar of ouder is, wordt de bijtelling berekend als 35% over de waarde in het economisch verkeer (dagwaarde).")
+            
+            idx_bijt = bepaal_bijtelling_index(int(auto['toelating'][:4]), any("elektriciteit" in b for b in auto['brandstoffen']), is_young_manual)
             gekozen_bijt = st.selectbox("Bijtellingsprofiel", BIJTELLING_OPTIES, index=idx_bijt)
+            
             z_km = st.number_input("Zakelijke km / jaar", value=25000)
             p_km = st.number_input("Privé km / jaar", value=5000)
             totaal_km = z_km + p_km
+            
         with col2:
             st.markdown("**Verbruik & Brandstof**")
             verbruik = st.number_input("Verbruik (L of kWh/100km)", value=auto['rdw_verbruik'])
             prijs_brand = st.number_input("Prijs p/l of kWh", value=1.95)
             brandstof_totaal = ((z_km + p_km) / 100) * verbruik * prijs_brand
+            
         with col3:
             st.markdown("**Vaste & Variabele Kosten**")
+            mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
             mrb = st.number_input("Wegenbelasting (€ / jaar)", value=int(mrb_jaar))
             onderhoud = st.number_input("Onderhoud (€ / jaar)", value=600)
             verzekering = st.number_input("Verzekering (€ / jaar)", value=800)
             overige = st.number_input("Overige kosten (€ / jaar)", value=500)
             lease = st.number_input("Lease/Rente (€ / jaar)", value=0)
 
-        # Fiscale controle 10%
         if totaal_km > 0 and (z_km / totaal_km) < 0.10:
             st.error(f"🚨 **Fiscale Eis:** De auto wordt voor {(z_km / totaal_km)*100:.1f}% zakelijk gebruikt. Dit is minder dan de vereiste 10%.")
 
         afschr = (aanschaf * 0.8) * 0.2
         tot_k = brandstof_totaal + mrb + onderhoud + verzekering + overige + afschr + lease
         
-        # Bijtelling berekenen
-        bijt_perc = float(gekozen_bijt.split("%")[0]) / 100
-        if "Youngtimer" in gekozen_bijt: bijt_bedrag = aanschaf * 0.35
-        elif "€" in gekozen_bijt:
-            cap = float(gekozen_bijt.split("€ ")[1].split(",")[0].replace(".", ""))
-            bijt_bedrag = (min(auto['catalogusprijs'], cap) * bijt_perc) + (max(0, auto['catalogusprijs'] - cap) * 0.22)
-        else: bijt_bedrag = auto['catalogusprijs'] * bijt_perc
+        if is_young_manual: bijt_bedrag = aanschaf * 0.35
+        else:
+            bijt_perc = float(gekozen_bijt.split("%")[0]) / 100
+            if "€" in gekozen_bijt:
+                cap = float(gekozen_bijt.split("€ ")[1].split(",")[0].replace(".", ""))
+                bijt_bedrag = (min(auto['catalogusprijs'], cap) * bijt_perc) + (max(0, auto['catalogusprijs'] - cap) * 0.22)
+            else: bijt_bedrag = auto['catalogusprijs'] * bijt_perc
 
         zak_aftrek = tot_k - bijt_bedrag
         pri_aftrek = z_km * 0.23
@@ -216,8 +226,8 @@ if kenteken_input:
             class VVAAPDF(FPDF):
                 def header(self):
                     self.set_fill_color(232, 78, 15); self.rect(0, 0, 210, 15, 'F')
-                    logo_path = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
-                    if os.path.exists(logo_path): self.image(logo_path, 10, 20, 35)
+                    logo = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
+                    if os.path.exists(logo): self.image(logo, 10, 20, 35)
                     self.set_xy(10, 32); self.set_font("Arial", 'I', 10); self.cell(0, 10, "In het hart van de gezondheidszorg.", ln=True)
                 def footer(self):
                     self.set_y(-15); self.set_fill_color(0, 49, 92); self.rect(0, 282, 210, 15, 'F')
@@ -225,27 +235,25 @@ if kenteken_input:
 
             pdf = VVAAPDF(); pdf.set_auto_page_break(auto=False); pdf.add_page()
             pdf.set_font("Arial", 'B', 16); pdf.set_text_color(0, 49, 92); pdf.set_xy(10, 45)
-            pdf.cell(0, 10, clean(f"Autoberekening: {klant_naam} ({klant_nummer})"), ln=True)
+            pdf.cell(0, 10, clean(f"VvAA autoberekening: {klant_naam} ({klant_nummer})"), ln=True)
             pdf.line(10, pdf.get_y(), 200, pdf.get_y()); pdf.ln(4)
 
-            # Sectie 1: Relatiegegevens
             pdf.set_font("Arial", 'B', 11); pdf.set_text_color(232, 78, 15); pdf.cell(200, 6, "1. Relatiegegevens", ln=True)
             pdf.set_font("Arial", '', 10); pdf.set_text_color(0)
             pdf.cell(35, 5, "Naam relatie:"); pdf.cell(70, 5, clean(klant_naam)); pdf.cell(35, 5, "Datum:"); pdf.cell(50, 5, datetime.datetime.now().strftime("%d-%m-%Y"), ln=True)
-            pdf.cell(35, 5, "Lidnummer:"); pdf.cell(70, 5, clean(klant_nummer), ln=True); pdf.ln(4)
+            pdf.cell(35, 5, "Lidnummer:"); pdf.cell(70, 5, clean(klant_nummer), ln=True); pdf.ln(3)
 
-            # Sectie 2: Voertuigspecificaties
             pdf.set_font("Arial", 'B', 11); pdf.set_text_color(232, 78, 15); pdf.cell(200, 6, "2. Voertuigspecificaties", ln=True)
             pdf.set_font("Arial", '', 10); pdf.set_text_color(0); pdf.set_fill_color(245)
             pdf.cell(35, 6, " Merk & Type:", fill=True); pdf.cell(155, 6, clean(f"{auto['merk']} {auto['handelsbenaming']} ({kenteken_input.upper()})"), fill=True, ln=True)
-            pdf.cell(35, 6, " Eerste toelating:", fill=True); pdf.cell(155, 6, f"{auto['toelating']} ({leeftijd_exact.years} jaar, {leeftijd_exact.months} mnd)", fill=True, ln=True)
-            pdf.cell(35, 6, " Verbruik:", fill=True); pdf.cell(155, 6, f"{auto['rdw_verbruik']} L/100km (RDW)", fill=True, ln=True); pdf.ln(2)
+            pdf.cell(35, 6, " Brandstof:", fill=True); pdf.cell(155, 6, brandstof_tekst, fill=True, ln=True)
+            pdf.cell(35, 6, " Eerste toelating:", fill=True); pdf.cell(155, 6, f"{auto['toelating']} ({leeftijd.years} jaar, {leeftijd.months} mnd)", fill=True, ln=True)
+            pdf.cell(35, 6, " Youngtimer:", fill=True); pdf.cell(155, 6, "Ja" if is_young_manual else "Nee", fill=True, ln=True); pdf.ln(2)
             
             pdf.cell(45, 5, "Cataloguswaarde:"); pdf.cell(45, 5, f"EUR {fmt(auto['catalogusprijs'])}", align='R')
             pdf.cell(10, 5); pdf.cell(45, 5, "Aanschafwaarde:"); pdf.cell(45, 5, f"EUR {fmt(aanschaf)}", align='R', ln=True)
             pdf.cell(45, 5, "Bijtellingsprofiel:"); pdf.set_font("Arial", 'I', 9); pdf.cell(145, 5, clean(gekozen_bijt), ln=True); pdf.ln(3)
 
-            # Sectie 3: Financiële vergelijking
             pdf.set_font("Arial", 'B', 11); pdf.set_text_color(232, 78, 15)
             pdf.cell(90, 7, "Auto zakelijk", border='B'); pdf.cell(10, 7); pdf.cell(90, 7, "Auto prive", border='B', ln=True)
             pdf.set_font("Arial", '', 10); pdf.set_text_color(0); pdf.ln(2)
@@ -270,22 +278,15 @@ if kenteken_input:
             pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(zak_aftrek)} ", fill=True, align='R')
             pdf.cell(10, 8); pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(pri_aftrek)} ", fill=True, align='R', ln=True); pdf.ln(5)
             
-            # Sectie 4: Advies & Aandachtspunten
             pdf.set_fill_color(232, 78, 15); pdf.set_text_color(255); pdf.set_font("Arial", 'B', 11)
             pdf.cell(190, 10, clean(f"  Advies vanuit fiscaal oogpunt: {advies}"), fill=True, ln=True); pdf.ln(4)
             
             pdf.set_text_color(0, 49, 92); pdf.set_font("Arial", 'B', 10); pdf.cell(0, 5, "Aandachtspunten bij zakelijk rijden:", ln=True)
             pdf.set_font("Arial", '', 8); pdf.set_text_color(0)
-            punten = [
-                "- Kosten zijn schattingen gebaseerd op Belastingdienst tarieven 2026.",
-                "- Houd rekening met het eventuele vervallen van rente op de lening.",
-                "- Na 5 jaar vervallen de afschrijvingskosten.",
-                "- Bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming.",
-                "- Percentage bijtelling geldt voor 60 maanden vanaf datum eerste toelating."
-            ]
+            punten = ["- Kosten zijn schattingen gebaseerd op Belastingdienst tarieven 2026.", "- Houd rekening met het eventuele vervallen van rente op de lening.", "- Na 5 jaar vervallen de afschrijvingskosten.", "- Bij inruil kan een boekwinst ontstaan.", "- Bijtelling geldt voor 60 maanden vanaf datum eerste toelating."]
             for p in punten: pdf.cell(0, 4, clean(p), ln=True)
 
-            bestandsnaam = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
-            st.download_button("📄 Download PDF Rapport", data=pdf.output(dest='S').encode('latin-1'), file_name=bestandsnaam)
+            fname = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
+            st.download_button("📄 Download Definitief Rapport (VvAA PDF)", data=pdf.output(dest='S').encode('latin-1'), file_name=fname)
         else:
-            st.info("ℹ️ Vul eerst de naam van de relatie en een numeriek lidnummer in om het rapport te kunnen genereren.")
+            st.info("ℹ️ Vul eerst de Naam en het Lidnummer (cijfers) in om het rapport te kunnen genereren.")
