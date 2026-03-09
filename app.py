@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 # --- 1. VvAA HUISSTIJL & CONFIGURATIE ---
 VVAA_ORANJE = "#E84E0F"
 VVAA_BLAUW = "#00315C"
-VVAA_LICHTORANJE = "#FFF3ED" # Nieuwe, subtiele oranje basistint
+VVAA_LICHTORANJE = "#F9E8DF" # Iets donkerdere oranje/zand tint cf. huisstijl
 VVAA_GRIJS = "#F4F6F8" 
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
@@ -24,45 +24,52 @@ vvaa_css = f"""
         font-family: 'Arial', sans-serif !important;
     }}
     
-    /* Subtiele oranje huisstijl tint als basis achtergrond */
+    /* VvAA huisstijl tint als basis achtergrond */
     .stApp {{ background-color: {VVAA_LICHTORANJE} !important; }}
     p, label, span, li {{ color: {VVAA_BLAUW} !important; }}
     
     /* --- 2. MODERNE HEADERS --- */
     h1, h2, h3, h4, h5, h6 {{ color: {VVAA_BLAUW} !important; font-weight: bold !important; }}
-    h3 {{ border-bottom: 2px solid {VVAA_ORANJE} !important; padding-bottom: 8px !important; margin-bottom: 20px !important; }}
-    h4 {{ color: {VVAA_ORANJE} !important; margin-top: 10px !important; margin-bottom: 15px !important; }}
+    h3 {{ border-bottom: 2px solid {VVAA_ORANJE} !important; padding-bottom: 8px !important; margin-bottom: 20px !important; font-size: 1.3rem !important; }}
+    h4 {{ color: {VVAA_ORANJE} !important; margin-top: 10px !important; margin-bottom: 15px !important; font-size: 1.05rem !important; }}
 
     /* --- 3. MODERNE CARDS (Witte vlakken) --- */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         background-color: #FFFFFF !important;
         border: 1px solid #F0D5C9 !important;
         border-radius: 12px !important;
-        box-shadow: 0 4px 15px rgba(232, 78, 15, 0.05) !important;
+        box-shadow: 0 4px 15px rgba(232, 78, 15, 0.06) !important;
         padding: 15px !important;
     }}
 
     /* --- 4. FIX VOOR INPUTVELDEN & DROPDOWNS --- */
-    /* Veilige manier om inputs wit/blauw te houden zonder de Streamlit UI te breken */
-    div[data-baseweb="input"] > div, 
+    /* Zorgt ervoor dat tekstinvoer blauw is en de achtergrond wit */
+    input {{
+        color: {VVAA_BLAUW} !important;
+        background-color: #FFFFFF !important;
+    }}
+    
+    /* Focus state voor input */
+    div[data-baseweb="input"] > div:focus-within {{
+        border-color: {VVAA_ORANJE} !important;
+        box-shadow: 0 0 0 1px {VVAA_ORANJE} !important;
+    }}
+
+    /* Specifieke fix voor Dropdowns zodat deze ALTIJD wit/blauw zijn */
     div[data-baseweb="select"] > div {{ 
         background-color: #FFFFFF !important; 
         color: {VVAA_BLAUW} !important; 
         border-radius: 6px !important; 
         border: 1px solid #D1D8E0 !important; 
     }}
-    
-    /* Focus styling */
-    div[data-baseweb="input"] > div:focus-within, 
     div[data-baseweb="select"] > div:focus-within {{
         border-color: {VVAA_ORANJE} !important;
         box-shadow: 0 0 0 1px {VVAA_ORANJE} !important;
     }}
-
     div[data-baseweb="select"] span {{ color: {VVAA_BLAUW} !important; }}
     
-    /* Dropdown menu lijsten */
-    div[data-baseweb="popover"] > div, ul[role="listbox"] {{ background-color: #FFFFFF !important; border: 1px solid #D1D8E0 !important; }}
+    /* Dropdown menu lijsten (popovers) */
+    div[data-baseweb="popover"], div[data-baseweb="popover"] > div, ul[role="listbox"] {{ background-color: #FFFFFF !important; border: 1px solid #D1D8E0 !important; }}
     ul[role="listbox"] li {{ color: {VVAA_BLAUW} !important; background-color: #FFFFFF !important; }}
     ul[role="listbox"] li:hover {{ background-color: {VVAA_LICHTORANJE} !important; color: {VVAA_ORANJE} !important; }}
 
@@ -81,6 +88,7 @@ vvaa_css = f"""
         background-color: {VVAA_BLAUW} !important; color: white !important; border-radius: 8px !important;
         padding: 15px 32px !important; font-size: 18px !important; font-weight: bold !important; width: 100% !important;
         box-shadow: 0 4px 6px rgba(0, 49, 92, 0.15) !important; border: none !important; transition: all 0.3s ease;
+        display: block !important;
     }}
     div.stDownloadButton > button:hover {{ background-color: #001F3F !important; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 49, 92, 0.25) !important; }}
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
@@ -108,8 +116,8 @@ vvaa_css = f"""
         background-color: #FFFFFF; border-left: 5px solid {VVAA_ORANJE}; padding: 15px 20px; 
         border-radius: 8px; box-shadow: 0px 4px 10px rgba(0, 49, 92, 0.05); border: 1px solid #E0E6ED;
     }}
-    div[data-testid="metric-container"] label {{ font-size: 15px !important; font-weight: bold; color: {VVAA_BLAUW} !important; }}
-    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{ color: {VVAA_ORANJE} !important; font-weight: 900; font-size: 28px !important; }}
+    div[data-testid="metric-container"] label {{ font-size: 15px !important; font-weight: bold; color: #555 !important; }}
+    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{ color: {VVAA_BLAUW} !important; font-weight: 900; font-size: 28px !important; }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
@@ -146,15 +154,15 @@ def load_mrb_data():
 df_mrb, df_prov = load_mrb_data()
 
 # --- 4. MODERNE HEADER LAYOUT ---
-# Meer ruimte voor het logo (1 staat tot 3)
-col_logo, col_title = st.columns([1, 3])
+col_logo, col_title = st.columns([1, 5])
 with col_logo:
     logo_path = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
     if os.path.exists(logo_path):
-        st.image(logo_path, use_container_width=True)
+        # Vaste breedte voorkomt enorme witte blokken als het een JPG is
+        st.image(logo_path, width=150)
 with col_title:
-    # Slogan verwijderd, titel mooi uitgelijnd
-    st.markdown(f"<h1 style='color: {VVAA_BLAUW}; margin-bottom: 0px; padding-top: 10px;'>Autoberekening: Zakelijk of Privé?</h1>", unsafe_allow_html=True)
+    # Strakkere H2 titel, mooi uitgelijnd met het logo
+    st.markdown(f"<h2 style='color: {VVAA_BLAUW}; margin: 0; padding-top: 15px;'>Autoberekening: Zakelijk of Privé?</h2>", unsafe_allow_html=True)
 st.markdown(f"<hr style='border: 2px solid {VVAA_ORANJE}; border-radius: 5px; margin-top: 10px; margin-bottom: 30px;'>", unsafe_allow_html=True)
 
 # --- 5. RDW API FUNCTIE ---
@@ -264,6 +272,9 @@ if kenteken_input:
         
         brandstof_t = ", ".join(auto['brandstoffen']).title()
         
+        is_vervallen_ev = False
+        peil_jaar = toel_dt.year
+        
         if is_full_ev:
             start_mnd = toel_dt.month + 1
             start_jr = toel_dt.year
@@ -273,9 +284,6 @@ if kenteken_input:
             eind_60mnd_dt = start_60mnd_dt + relativedelta(months=60)
             is_vervallen_ev = vandaag >= eind_60mnd_dt
             peil_jaar = eind_60mnd_dt.year if is_vervallen_ev else toel_dt.year
-        else:
-            is_vervallen_ev = False
-            peil_jaar = toel_dt.year
         
         st.success(f"🚙 **{auto['merk']} ({kenteken_input}) - {auto['handelsbenaming']}** \n"
                    f"Brandstof: {brandstof_t} | Toelating: {toelating_nl} ({leeftijd.years} jaar en {leeftijd.months} maanden oud)")
@@ -371,9 +379,10 @@ if kenteken_input:
                 mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
                 mrb = st.number_input("Wegenbelasting (€ / jaar)", value=int(mrb_jaar))
                 
+                # EMOJI BUG FIX
                 gebruik_schatting = st.checkbox("🧮 Bereken schatting voor vaste kosten", value=False)
                 if gebruik_schatting:
-                    with st.expander("ℹ️ Hoe berekenen wij deze schatting?"):
+                    with st.expander("ℹ️ Uitleg vaste kosten schatting"):
                         st.write("""
                         - **Onderhoud:** € 0,04 per gereden kilometer (totaal).
                         - **Verzekering:** Blijft op € 0, vul uw eigen premie in.
@@ -449,7 +458,7 @@ if kenteken_input:
                     self.set_fill_color(232, 78, 15); self.rect(0, 0, 210, 15, 'F')
                     logo = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
                     if os.path.exists(logo): self.image(logo, 10, 20, 35)
-                    # Slogan verwijderd zoals gevraagd
+                    # Slogan verwijderd
                     
                 def footer(self):
                     self.set_y(-15); self.set_fill_color(0, 49, 92); self.rect(0, 282, 210, 15, 'F')
