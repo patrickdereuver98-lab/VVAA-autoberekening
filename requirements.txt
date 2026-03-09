@@ -2,3 +2,4 @@ streamlit
 requests
 fpdf
 pandas
+python-dateutil
