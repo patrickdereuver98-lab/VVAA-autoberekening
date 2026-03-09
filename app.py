@@ -36,6 +36,9 @@ vvaa_css = f"""
     div[data-testid="stAlert"] {{ background-color: {VVAA_GRIJS} !important; border-left: 5px solid {VVAA_ORANJE} !important; padding: 10px; }}
     div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
     input, select, div[data-baseweb="select"] > div {{ background-color: #ffffff !important; color: {VVAA_BLAUW} !important; }}
+    
+    /* Zorgt dat het expander-menuutje netjes in de VvAA stijl valt */
+    .streamlit-expanderHeader { color: {VVAA_BLAUW} !important; font-weight: bold; }
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
@@ -48,7 +51,6 @@ def fmt(val):
 def haal_actuele_brandstofprijzen():
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
-        # Haal actuele Gemiddelde Landelijke Adviesprijs (GLA) op van UnitedConsumers
         res = requests.get("https://www.unitedconsumers.com/tanken", headers=headers, timeout=5)
         e95_match = re.search(r'Euro95 \(E10\).*?€\s*(\d{1},\d{3})', res.text, re.DOTALL)
         diesel_match = re.search(r'Diesel.*?€\s*(\d{1},\d{3})', res.text, re.DOTALL)
@@ -60,7 +62,6 @@ def haal_actuele_brandstofprijzen():
             "lpg": float(lpg_match.group(1).replace(',', '.')) if lpg_match else 0.85
         }
     except:
-        # Fallback als de website niet bereikbaar is
         return {"benzine": 2.05, "diesel": 1.85, "lpg": 0.85}
 
 # --- 3. DATA LADEN UIT CSV (Tarieven 2026) ---
@@ -258,7 +259,6 @@ if kenteken_input:
                     st.info("ℹ️ Verbruik niet bekend bij RDW. Vul dit zelf in.")
                 verbruik_l = st.number_input("Verbruik Benzine/Diesel (L/100km)", value=float(auto['rdw_verbruik']))
                 
-                # Bepaal automatisch de live prijs obv brandstoftype
                 bs_lower = [b.lower() for b in auto['brandstoffen']]
                 if any("diesel" in b for b in bs_lower): def_prijs = actuele_prijzen["diesel"]
                 elif any("lpg" in b for b in bs_lower): def_prijs = actuele_prijzen["lpg"]
@@ -277,12 +277,20 @@ if kenteken_input:
             
         with col3:
             st.markdown("**Vaste & Variabele Kosten**")
+            st.info("ℹ️ Verzekering en onderhoud staan standaard op € 0. Vul uw eigen in, of gebruik de automatische schatting hieronder.")
             
             mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
             mrb = st.number_input("Wegenbelasting (€ / jaar)", value=int(mrb_jaar))
             
-            # Vinkje voor automatische schatting vaste kosten
-            gebruik_schatting = st.checkbox("🧮 Bereken schatting voor vaste kosten", value=False, help="Vink aan om een inschatting voor verzekering en onderhoud te maken.")
+            # Vinkje voor automatische schatting vaste kosten + Uitleg menuutje
+            gebruik_schatting = st.checkbox("📊 Bereken schatting voor vaste kosten", value=False)
+            if gebruik_schatting:
+                with st.expander("ℹ️ Hoe berekenen wij deze schatting?"):
+                    st.write("""
+                    - **Onderhoud:** € 0,04 per gereden kilometer (totaal zakelijk + privé).
+                    - **Verzekering:** Basisbedrag van € 300,- plus 1,5% van de cataloguswaarde (gemaximeerd op € 2.500,-).
+                    - **Overige kosten:** Vaste aanname van € 250,- per jaar.
+                    """)
             
             calc_onderhoud = int(totaal_km * 0.04) if gebruik_schatting else 0
             calc_verzekering = int(min(2500, (auto['catalogusprijs'] * 0.015) + 300)) if gebruik_schatting and auto['catalogusprijs'] > 0 else 0
@@ -414,7 +422,7 @@ if kenteken_input:
             pdf.set_font(f, '', 8); pdf.set_text_color(0, 0, 0)
             
             punten = [
-                "- De getoonde autokosten zijn deels gebaseerd op uw eigen schatting en ingevulde parameters.",
+                "- De getoonde berekening is een schatting op basis van uw eigen opgave. De werkelijke cijfers kunnen hiervan afwijken.",
                 "- Wegenbelasting is gebaseerd op Belastingdienst tarieven 2026.", 
                 "- Na 5 jaar vervallen de afschrijvingskosten.", 
                 "- Bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming."
