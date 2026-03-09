@@ -37,8 +37,8 @@ vvaa_css = f"""
     div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
     input, select, div[data-baseweb="select"] > div {{ background-color: #ffffff !important; color: {VVAA_BLAUW} !important; }}
     
-    /* Zorgt dat het expander-menuutje netjes in de VvAA stijl valt */
-    .streamlit-expanderHeader { color: {VVAA_BLAUW} !important; font-weight: bold; }
+    /* Zorgt dat het expander-menuutje netjes in de VvAA stijl valt - HAAKJES GEFIXT */
+    .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
@@ -282,8 +282,7 @@ if kenteken_input:
             mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
             mrb = st.number_input("Wegenbelasting (€ / jaar)", value=int(mrb_jaar))
             
-            # Vinkje voor automatische schatting vaste kosten + Uitleg menuutje
-            gebruik_schatting = st.checkbox("📊 Bereken schatting voor vaste kosten", value=False)
+            gebruik_schatting = st.checkbox("🧮 Bereken schatting voor vaste kosten", value=False)
             if gebruik_schatting:
                 with st.expander("ℹ️ Hoe berekenen wij deze schatting?"):
                     st.write("""
