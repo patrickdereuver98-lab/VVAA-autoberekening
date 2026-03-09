@@ -44,8 +44,20 @@ vvaa_css = f"""
     .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
     div[data-testid="stExpander"] details div {{ color: {VVAA_BLAUW} !important; }}
     
+    /* --- FIX VOOR DE DROPDOWNS EN DARKMODE --- */
     input, select, div[data-baseweb="select"] > div {{ background-color: white !important; color: {VVAA_BLAUW} !important; border-radius: 6px !important; border: 1px solid #ddd !important; }}
     
+    /* Forceer de geselecteerde tekst naar blauw */
+    div[data-baseweb="select"] div[class*="singleValue"] {{ color: {VVAA_BLAUW} !important; }}
+    
+    /* Forceer de uitklaplijst (popover) naar wit */
+    div[data-baseweb="popover"] > div, ul[role="listbox"] {{ background-color: white !important; }}
+    
+    /* Forceer de opties in de lijst naar blauwe tekst op witte achtergrond */
+    ul[role="listbox"] li {{ color: {VVAA_BLAUW} !important; background-color: white !important; }}
+    ul[role="listbox"] li:hover {{ background-color: {VVAA_GRIJS} !important; }}
+    /* --- EINDE FIX --- */
+
     div[data-testid="metric-container"] {{
         background-color: white; border-left: 5px solid {VVAA_ORANJE}; padding: 15px 20px; border-radius: 8px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
     }}
@@ -169,7 +181,6 @@ def bepaal_bijtelling_index(peil_jaar, is_full_ev, is_youngtimer):
 
 # --- 6. INTERFACE / CARDS ---
 
-# CARD 1: Relatiegegevens
 with st.container(border=True):
     st.markdown("### 👤 1. Relatiegegevens")
     colA, colB = st.columns(2)
@@ -220,11 +231,9 @@ if kenteken_input:
         st.success(f"🚙 **{auto['merk']} ({kenteken_input.upper()}) - {auto['handelsbenaming']}** \n"
                    f"Brandstof: {brandstof_t} | Toelating: {toelating_nl} ({leeftijd.years} jaar en {leeftijd.months} maanden oud)")
         
-        # CARD 2: Parameters
         with st.container(border=True):
             st.markdown("### ⚙️ 2. Gebruik & Uitgangspunten")
             
-            # --- NIEUWE TOP-SECTIE VOOR KILOMETERS EN HOOFDVINKJES ---
             top1, top2, top3 = st.columns(3)
             with top1:
                 st.markdown("#### Kilometers per jaar")
@@ -254,7 +263,6 @@ if kenteken_input:
             st.markdown("---")
             st.markdown("### 💶 Financiële Specificaties")
             
-            # --- FINANCIELE SPECIFICATIES ---
             col1, col2, col3 = st.columns(3)
             
             with col1:
@@ -313,10 +321,12 @@ if kenteken_input:
                 if gebruik_schatting:
                     with st.expander("ℹ️ Hoe berekenen wij deze schatting?"):
                         st.write("""
-                        - **Onderhoud:** € 0,04 per gereden kilometer.
-                        - **Verzekering:** Afhankelijk van persoon/no-claim. (Blijft op € 0, vul zelf in).
+                        - **Onderhoud:** € 0,04 per gereden kilometer (totaal).
+                        - **Verzekering:** Blijft op € 0, vul uw eigen premie in.
                         - **Overig:** Vaste aanname van € 250,-.
                         """)
+                else:
+                    st.caption("*Vaste kosten staan op € 0. Vul uw eigen in, of gebruik de automatische schatting hierboven.*")
                 
                 calc_onderhoud = int(totaal_km * 0.04) if gebruik_schatting else 0
                 
@@ -324,7 +334,6 @@ if kenteken_input:
                 verzekering = st.number_input("Verzekering (€ / jaar)", value=0, help="Te persoonlijk om in te schatten. Vul uw eigen premie in.")
                 overige = st.number_input("Overige kosten (€ / jaar)", value=250 if gebruik_schatting else 0)
                 
-                # Nieuwe Lease / Rente velden (afhankelijk van top vinkje)
                 lease_kosten = 0.0
                 rente_kosten = 0.0
                 if is_geleased:
@@ -333,7 +342,6 @@ if kenteken_input:
                     lease_kosten = st.number_input("Leasekosten (Operational/Private) (€/j)", value=0)
                     rente_kosten = st.number_input("Rentekosten lening (Financial) (€/j)", value=0)
 
-        # Fiscale eisen & berekeningen
         if totaal_km > 0 and (z_km / totaal_km) < 0.10:
             st.error(f"🚨 **Fiscale Eis:** Auto wordt voor {(z_km / totaal_km)*100:.1f}% zakelijk gebruikt. Minimaal 10% is vereist.")
 
@@ -371,7 +379,7 @@ if kenteken_input:
                 st.markdown("#### 🏠 Auto Privé")
                 st.write(f"Vergoeding: **€ 0,23 per zakelijke km**")
                 st.write(f"Aantal zakelijke km: **{fmt(z_km)}**")
-                st.write("<br>", unsafe_allow_html=True) # Witregel voor uitlijning
+                st.write("<br>", unsafe_allow_html=True)
                 st.metric("Fiscale Aftrekpost", f"€ {fmt(pri_aftrek)}")
 
         if gevalideerd:
