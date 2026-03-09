@@ -14,41 +14,59 @@ st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="w
 
 vvaa_css = f"""
 <style>
-    /* Algemene App Achtergrond en Tekstkleur */
+    /* Algemene App Achtergrond */
     .stApp {{
-        background-color: #ffffff;
+        background-color: #ffffff !important;
     }}
     
-    /* Titels en labels in VvAA Blauw of Oranje */
-    h1, h2, h3, h4 {{ color: {VVAA_ORANJE}; font-family: 'Arial', sans-serif; }}
-    p, label, .stMarkdown {{ color: {VVAA_BLAUW} !important; }}
+    /* Forceer de hoofdkleur voor normale tekst naar VvAA Blauw */
+    .stApp, p, label, div[data-testid="stMarkdownContainer"] > p {{
+        color: {VVAA_BLAUW} !important;
+    }}
+
+    /* Koppen (Titels, Subheaders) MOETEN VvAA Oranje zijn */
+    h1, h2, h3, h4, h5, h6, 
+    div[data-testid="stMarkdownContainer"] > h1, 
+    div[data-testid="stMarkdownContainer"] > h2, 
+    div[data-testid="stMarkdownContainer"] > h3 {{ 
+        color: {VVAA_ORANJE} !important; 
+        font-family: 'Arial', sans-serif !important; 
+    }}
     
     /* Primaire knop (Berekenen/Acties) */
     .stButton>button {{ 
-        background-color: {VVAA_ORANJE}; 
+        background-color: {VVAA_ORANJE} !important; 
         color: white !important; 
         border-radius: 4px; 
         border: none; 
         padding: 10px 24px; 
         font-weight: bold; 
     }}
-    .stButton>button:hover {{ background-color: #c73e07; }}
+    .stButton>button * {{ color: white !important; }}
+    .stButton>button:hover {{ background-color: #c73e07 !important; }}
     
     /* Secundaire knop (Download PDF) */
     .stDownloadButton>button {{ 
-        background-color: {VVAA_BLAUW}; 
+        background-color: {VVAA_BLAUW} !important; 
         color: white !important; 
         width: 100%;
         font-size: 16px;
     }}
-    .stDownloadButton>button:hover {{ background-color: #001f3b; }}
+    .stDownloadButton>button * {{ color: white !important; }}
+    .stDownloadButton>button:hover {{ background-color: #001f3b !important; }}
     
-    /* Info boxen & Waarschuwingen (Zorgt dat tekst leesbaar is!) */
+    /* Info boxen & Waarschuwingen */
     div[data-testid="stAlert"] {{ 
-        background-color: {VVAA_GRIJS}; 
-        border-left: 5px solid {VVAA_ORANJE}; 
+        background-color: {VVAA_GRIJS} !important; 
+        border-left: 5px solid {VVAA_ORANJE} !important; 
     }}
-    div[data-testid="stAlert"] div, div[data-testid="stAlert"] p, div[data-testid="stAlert"] span {{
+    div[data-testid="stAlert"] * {{
+        color: {VVAA_BLAUW} !important;
+    }}
+    
+    /* Input velden leesbaar maken */
+    input, select, div[data-baseweb="select"] > div {{
+        background-color: #ffffff !important;
         color: {VVAA_BLAUW} !important;
     }}
 </style>
@@ -137,7 +155,6 @@ with colB:
     klant_nummer = st.text_input("Relatienummer (alleen cijfers) *")
 with colC: 
     kenteken_input = st.text_input("Kenteken (bijv. AB-123-C) *")
-    # Provincie subtieler weggewerkt bij de kenteken invoer
     provincie = st.selectbox("Provincie (voor Wegenbelasting)", ["Drenthe", "Flevoland", "Friesland", "Gelderland", "Groningen", "Limburg", "Noord-Brabant", "Noord-Holland", "Overijssel", "Utrecht", "Zeeland", "Zuid-Holland"])
 
 is_valid_naam = bool(klant_naam) and not klant_naam.replace(" ", "").isdigit()
@@ -269,7 +286,6 @@ if kenteken_input:
                     self.set_fill_color(232, 78, 15)
                     self.rect(0, 0, 210, 15, 'F')
                     
-                    # Aangepast naar .jpg
                     if os.path.exists("vvaa_logo.jpg"):
                         self.image("vvaa_logo.jpg", x=10, y=20, w=35)
                     else:
