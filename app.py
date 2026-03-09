@@ -104,7 +104,7 @@ def bereken_mrb_csv(gewicht, brandstoffen, provincie_naam):
     elif any("lpg" in b for b in brandstoffen): toeslag = 172.08 + (math.ceil(max(0, gewicht-900)/100) * 18.22)
     jaarbedrag = (mrb_3mnd + toeslag) * 4
     if any("elektriciteit" in b for b in brandstoffen) and not any(x in ["benzine", "diesel"] for x in brandstoffen):
-        jaarbedrag *= 0.75 # EV korting 2026 (25% betalen)
+        jaarbedrag *= 0.75
     return round(jaarbedrag)
 
 BIJTELLING_OPTIES = [
@@ -153,7 +153,6 @@ if kenteken_input:
         is_young_auto = leeftijd.years >= 15
         brandstof_t = ", ".join(auto['brandstoffen']).title()
         
-        # Voertuigkop weergave
         st.success(f"**{auto['merk']} ({kenteken_input.upper()}) - {auto['handelsbenaming']} - {brandstof_t} | {leeftijd.years} jaar en {leeftijd.months} maanden oud**")
         
         col1, col2, col3 = st.columns(3)
@@ -164,9 +163,11 @@ if kenteken_input:
             
             is_young_manual = st.checkbox("Youngtimer regeling toepassen?", value=is_young_auto)
             
-            # Slimme Youngtimer waarschuwingen
+            # Youngtimer waarschuwingen
             if is_young_manual and not is_young_auto:
-                st.warning(f"⚠️ **Let op:** De youngtimer-regeling wordt toegepast, maar dit voertuig is volgens de RDW-gegevens pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
+                st.warning(f"⚠️ **Pas op:** De youngtimer-regeling wordt toegepast, maar dit voertuig is volgens de RDW-gegevens pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
+            elif is_young_auto and not is_young_manual:
+                st.info(f"💡 **Tip:** Dit voertuig is {leeftijd.years} jaar oud. De youngtimer-regeling (35% bijtelling over dagwaarde) kan fiscaal voordeliger zijn.")
             elif is_young_manual:
                 st.info("ℹ️ **Youngtimer-regeling:** Bijtelling wordt berekend als 35% over de dagwaarde.")
             
@@ -198,8 +199,7 @@ if kenteken_input:
         afschr = (aanschaf * 0.8) * 0.2
         tot_k = brandstof_kosten + mrb + onderhoud + verzekering + overige + afschr + lease
         
-        if is_young_manual: 
-            bijt_bedrag = aanschaf * 0.35
+        if is_young_manual: bijt_bedrag = aanschaf * 0.35
         else:
             bijt_perc = float(gekozen_bijt.split("%")[0]) / 100
             if "€" in gekozen_bijt:
@@ -240,13 +240,11 @@ if kenteken_input:
             pdf.cell(0, 10, clean(f"VvAA autoberekening: {klant_naam} ({klant_nummer})"), ln=True)
             pdf.line(10, pdf.get_y(), 200, pdf.get_y()); pdf.ln(4)
 
-            # Sectie 1: Relatiegegevens
             pdf.set_font("Arial", 'B', 11); pdf.set_text_color(232, 78, 15); pdf.cell(200, 6, "1. Relatiegegevens", ln=True)
             pdf.set_font("Arial", '', 10); pdf.set_text_color(0)
             pdf.cell(35, 5, "Naam relatie:"); pdf.cell(70, 5, clean(klant_naam)); pdf.cell(35, 5, "Datum:"); pdf.cell(50, 5, datetime.datetime.now().strftime("%d-%m-%Y"), ln=True)
             pdf.cell(35, 5, "Lidnummer:"); pdf.cell(70, 5, clean(klant_nummer), ln=True); pdf.ln(3)
 
-            # Sectie 2: Voertuigspecificaties
             pdf.set_font("Arial", 'B', 11); pdf.set_text_color(232, 78, 15); pdf.cell(200, 6, "2. Voertuigspecificaties", ln=True)
             pdf.set_font("Arial", '', 10); pdf.set_text_color(0); pdf.set_fill_color(245)
             pdf.cell(35, 6, " Merk & Type:", fill=True); pdf.cell(155, 6, clean(f"{auto['merk']} {auto['handelsbenaming']} ({kenteken_input.upper()})"), fill=True, ln=True)
@@ -258,7 +256,6 @@ if kenteken_input:
             pdf.cell(10, 5); pdf.cell(45, 5, "Aanschafwaarde:"); pdf.cell(45, 5, f"EUR {fmt(aanschaf)}", align='R', ln=True)
             pdf.cell(45, 5, "Bijtellingsprofiel:"); pdf.set_font("Arial", 'I', 9); pdf.cell(145, 5, clean(gekozen_bijt), ln=True); pdf.ln(3)
 
-            # Sectie 3: Financiële vergelijking
             pdf.set_font("Arial", 'B', 11); pdf.set_text_color(232, 78, 15)
             pdf.cell(90, 7, "Auto zakelijk", border='B'); pdf.cell(10, 7); pdf.cell(90, 7, "Auto prive", border='B', ln=True)
             pdf.set_font("Arial", '', 10); pdf.set_text_color(0); pdf.ln(2)
@@ -283,7 +280,6 @@ if kenteken_input:
             pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(zak_aftrek)} ", fill=True, align='R')
             pdf.cell(10, 8); pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(pri_aftrek)} ", fill=True, align='R', ln=True); pdf.ln(5)
             
-            # Sectie 4: Advies & Aandachtspunten
             pdf.set_fill_color(232, 78, 15); pdf.set_text_color(255); pdf.set_font("Arial", 'B', 11)
             pdf.cell(190, 10, clean(f"  Advies vanuit fiscaal oogpunt: {advies}"), fill=True, ln=True); pdf.ln(4)
             
@@ -292,7 +288,7 @@ if kenteken_input:
             punten = ["- Kosten zijn schattingen gebaseerd op Belastingdienst tarieven 2026.", "- Houd rekening met het eventuele vervallen van rente op de lening.", "- Na 5 jaar vervallen de afschrijvingskosten.", "- Bij inruil kan een boekwinst ontstaan.", "- Bijtelling geldt voor 60 maanden vanaf datum eerste toelating."]
             for p in punten: pdf.cell(0, 4, clean(p), ln=True)
 
-            fname = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
-            st.download_button("📄 Download PDF Rapport", data=pdf.output(dest='S').encode('latin-1'), file_name=fname)
+            bestandsnaam = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
+            st.download_button("📄 Download PDF Rapport", data=pdf.output(dest='S').encode('latin-1'), file_name=bestandsnaam)
         else:
             st.info("ℹ️ Vul eerst de Naam en het Lidnummer (cijfers) in om het rapport te kunnen genereren.")
