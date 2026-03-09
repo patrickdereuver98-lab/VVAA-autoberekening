@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 # --- 1. VvAA HUISSTIJL & CONFIGURATIE ---
 VVAA_ORANJE = "#E84E0F"
 VVAA_BLAUW = "#00315C"
-VVAA_LICHTORANJE = "#F9E8DF" # Subtiele donkerdere oranje/zand tint cf. huisstijl
+VVAA_LICHTORANJE = "#F9E8DF" 
 VVAA_GRIJS = "#F4F6F8" 
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
@@ -43,7 +43,6 @@ vvaa_css = f"""
     }}
 
     /* --- 4. FIX VOOR INPUTVELDEN & DROPDOWNS --- */
-    /* Zorgt ervoor dat invoervelden (tekst en nummers) een witte achtergrond hebben */
     div[data-baseweb="input"] {{
         background-color: #FFFFFF !important;
         border-radius: 6px !important;
@@ -53,7 +52,6 @@ vvaa_css = f"""
         background-color: #FFFFFF !important;
     }}
     
-    /* Dropdown specifieke fix */
     div[data-baseweb="select"] > div {{ 
         background-color: #FFFFFF !important; 
         color: {VVAA_BLAUW} !important; 
@@ -61,18 +59,29 @@ vvaa_css = f"""
     }}
     div[data-baseweb="select"] span, div[data-baseweb="select"] div {{ color: {VVAA_BLAUW} !important; }}
     
-    /* Focus state voor alle velden */
     div[data-baseweb="input"]:focus-within, div[data-baseweb="select"] > div:focus-within {{
         border-color: {VVAA_ORANJE} !important;
         box-shadow: 0 0 0 1px {VVAA_ORANJE} !important;
     }}
 
-    /* Dropdown menu lijsten (popovers) - Wit met blauwe tekst */
-    div[data-baseweb="popover"], div[data-baseweb="popover"] > div, ul[role="listbox"] {{ 
+    /* DEFINITIEVE DROPDOWN FIX (Overschrijft alle donkere Streamlit thema's) */
+    div[data-baseweb="menu"], 
+    div[data-baseweb="popover"], 
+    div[data-baseweb="popover"] > div, 
+    ul[role="listbox"] {{ 
         background-color: #FFFFFF !important; 
     }}
-    ul[role="listbox"] li {{ color: {VVAA_BLAUW} !important; background-color: #FFFFFF !important; }}
-    ul[role="listbox"] li:hover {{ background-color: {VVAA_LICHTORANJE} !important; color: {VVAA_ORANJE} !important; }}
+    ul[role="listbox"] li, li[role="option"] {{ 
+        color: {VVAA_BLAUW} !important; 
+        background-color: #FFFFFF !important; 
+    }}
+    ul[role="listbox"] li:hover, li[role="option"]:hover {{ 
+        background-color: {VVAA_LICHTORANJE} !important; 
+        color: {VVAA_ORANJE} !important; 
+    }}
+    ul[role="listbox"] li span, li[role="option"] span {{
+        color: inherit !important;
+    }}
 
     /* --- 5. KNOPPEN (BUTTONS) --- */
     .stButton>button {{ 
@@ -92,7 +101,7 @@ vvaa_css = f"""
     div.stDownloadButton > button:hover {{ background-color: #001F3F !important; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 49, 92, 0.25) !important; }}
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
     
-    /* --- 6. MELDINGEN & ALERTS (Strak Oranje met witte tekst) --- */
+    /* --- 6. MELDINGEN & ALERTS --- */
     div[data-testid="stAlert"] {{ 
         background-color: {VVAA_ORANJE} !important; 
         border: none !important; 
@@ -102,7 +111,6 @@ vvaa_css = f"""
     }}
     div[data-testid="stAlert"] * {{ color: #FFFFFF !important; }}
     
-    /* --- 7. EXPANDER --- */
     div[data-testid="stExpander"] {{ 
         background-color: #FFFFFF !important; 
         border-left: 4px solid {VVAA_ORANJE} !important; 
@@ -111,7 +119,7 @@ vvaa_css = f"""
     }}
     .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
 
-    /* --- 8. RESULTATEN BOXEN --- */
+    /* --- 7. RESULTATEN BOXEN --- */
     div[data-testid="metric-container"] {{
         background-color: #FFFFFF; border-left: 5px solid {VVAA_ORANJE}; padding: 15px 20px; 
         border-radius: 8px; box-shadow: 0px 4px 10px rgba(0, 49, 92, 0.05); border: 1px solid #E0E6ED;
@@ -156,9 +164,10 @@ df_mrb, df_prov = load_mrb_data()
 # --- 4. MODERNE HEADER LAYOUT ---
 col_logo, col_title = st.columns([1, 5])
 with col_logo:
-    logo_path = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
+    # Aangepast naar het nieuwe transparante PNG bestand
+    logo_path = "VvAA_logo.png" 
     if os.path.exists(logo_path):
-        st.image(logo_path, width=130) # Iets breder voor mooie uitlijning
+        st.image(logo_path, width=130) 
 with col_title:
     st.markdown(f"<h2 style='color: {VVAA_BLAUW}; margin: 0; padding-top: 15px;'>Autoberekening: Zakelijk of Privé?</h2>", unsafe_allow_html=True)
 st.markdown(f"<hr style='border: 2px solid {VVAA_ORANJE}; border-radius: 5px; margin-top: 10px; margin-bottom: 30px;'>", unsafe_allow_html=True)
@@ -282,7 +291,8 @@ if kenteken_input:
             is_vervallen_ev = vandaag >= eind_60mnd_dt
             peil_jaar = eind_60mnd_dt.year if is_vervallen_ev else toel_dt.year
         
-        st.success(f"🚙 **{auto['merk']} ({kenteken_input}) - {auto['handelsbenaming']}** \n"
+        # Voertuig succesmelding (Aangepast aan styling)
+        st.success(f"🚙 **{auto['merk']} ({kenteken_input}) - {auto['handelsbenaming']}** \n\n"
                    f"Brandstof: {brandstof_t} | Toelating: {toelating_nl} ({leeftijd.years} jaar en {leeftijd.months} maanden oud)")
         
         with st.container(border=True):
@@ -378,8 +388,7 @@ if kenteken_input:
                 
                 gebruik_schatting = st.checkbox("🧮 Bereken schatting voor vaste kosten", value=False)
                 if gebruik_schatting:
-                    # Emoji naam gefikst om overlap met Streamlit pijltje te voorkomen
-                    with st.expander("Uitleg vaste kosten schatting"):
+                    with st.expander("ℹ️ Uitleg vaste kosten schatting"):
                         st.write("""
                         - **Onderhoud:** € 0,04 per gereden kilometer (totaal).
                         - **Verzekering:** Blijft op € 0, vul uw eigen premie in.
@@ -453,7 +462,8 @@ if kenteken_input:
 
                 def header(self):
                     self.set_fill_color(232, 78, 15); self.rect(0, 0, 210, 15, 'F')
-                    logo = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
+                    # Aangepast naar het nieuwe transparante PNG bestand
+                    logo = "VvAA_logo.png" 
                     if os.path.exists(logo): self.image(logo, 10, 20, 35)
                     
                 def footer(self):
