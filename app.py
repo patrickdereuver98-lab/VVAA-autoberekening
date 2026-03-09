@@ -54,10 +54,10 @@ def load_mrb_data():
 
 df_mrb, df_prov = load_mrb_data()
 
-if os.path.exists("VvAA-logo-RGB.png"):
-    st.image("VvAA-logo-RGB.png", width=200)
-elif os.path.exists("vvaa_logo.jpg"):
-    st.image("vvaa_logo.jpg", width=200)
+# Logo weergave
+logo_path = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
+if os.path.exists(logo_path):
+    st.image(logo_path, width=200)
 
 st.title("Autoberekening zakelijk of privé?")
 st.write(f"***In het hart van de gezondheidszorg.***")
@@ -87,42 +87,31 @@ def get_rdw_data(kenteken):
         }
     except: return None
 
-# --- 3. MRB REKENMETHODE (2026) ---
+# --- 3. REKENLOGICA (2026) ---
 def bereken_mrb_csv(gewicht, brandstoffen, provincie_naam):
     if df_mrb is None or df_prov is None: return 0
     trede = df_mrb[df_mrb['min_massa'] <= gewicht].iloc[-1]
     basis_kwartaal = trede['basis_3mnd']
-    extra = 0
-    if trede['toeslag_per_100kg'] > 0:
-        eenheden = math.ceil((gewicht - trede['drempel']) / 100)
-        extra = eenheden * trede['toeslag_per_100kg']
-    basis_totaal = basis_kwartaal + extra
-    opcenten = df_prov[df_prov['provincie'] == provincie_naam]['opcenten'].values[0]
-    mrb_3mnd = basis_totaal + (basis_totaal * (opcenten / 100))
+    extra = (math.ceil(max(0, gewicht - trede['drempel']) / 100) * trede['toeslag_per_100kg']) if trede['toeslag_per_100kg'] > 0 else 0
+    
+    opcenten_row = df_prov[df_prov['provincie'] == provincie_naam]
+    opcenten = opcenten_row['opcenten'].values[0] if not opcenten_row.empty else 85.0
+    mrb_3mnd = (basis_kwartaal + extra) * (1 + opcenten / 100)
+
     toeslag = 0
-    if any("diesel" in b for b in brandstoffen): toeslag = 153.00 + (math.ceil(max(0, gewicht-900)/100) * 16.57)
-    elif any("lpg" in b for b in brandstoffen): toeslag = 172.08 + (math.ceil(max(0, gewicht-900)/100) * 18.22)
+    if any("diesel" in b for b in brandstoffen):
+        toeslag = 153.00 + (math.ceil(max(0, gewicht-900)/100) * 16.57)
+    elif any("lpg" in b for b in brandstoffen):
+        toeslag = 172.08 + (math.ceil(max(0, gewicht-900)/100) * 18.22)
+    
     jaarbedrag = (mrb_3mnd + toeslag) * 4
     if any("elektriciteit" in b for b in brandstoffen) and not any(x in ["benzine", "diesel"] for x in brandstoffen):
         jaarbedrag *= 0.75
     return round(jaarbedrag)
 
 BIJTELLING_OPTIES = [
-    "22% over Cataloguswaarde (Standaard)", "35% over Aanschafwaarde (Youngtimer >15 jaar)",
-    "4% tot € 50.000, 22% daarboven (EV 2019)", "8% tot € 45.000, 22% daarboven (EV 2020)",
-    "12% tot € 40.000, 22% daarboven (EV 2021)", "16% tot € 35.000, 22% daarboven (EV 2022)",
-    "16% tot € 30.000, 22% daarboven (EV 2023/2024)", "17% tot € 30.000, 22% daarboven (EV 2025/2026)"
+    "22% over Cataloguswaarde (Standaard)", "35% over Aanschafwaarde (Youngtimer)"
 ]
-
-def bepaal_bijtelling_index(bouwjaar, is_ev, is_youngtimer):
-    if is_youngtimer: return 1
-    if not is_ev: return 0
-    if bouwjaar <= 2019: return 2
-    elif bouwjaar == 2020: return 3
-    elif bouwjaar == 2021: return 4
-    elif bouwjaar == 2022: return 5
-    elif bouwjaar in [2023, 2024]: return 6
-    else: return 7
 
 # --- 4. INTERFACE ---
 st.subheader("1. Klant & Voertuig Gegevens")
@@ -135,7 +124,7 @@ with colC: kenteken_input = st.text_input("Kenteken *")
 with colD: 
     prov_lijst = df_prov['provincie'].tolist() if df_prov is not None else ["Gelderland"]
     prov = st.selectbox("Provincie", prov_lijst)
-with colE: bereken_knop = st.button("Laden / Berekenen")
+with colE: st.button("Laden / Berekenen")
 
 is_valid_nummer = klant_nummer.isdigit()
 gevalideerd = bool(klant_naam) and is_valid_nummer
@@ -163,29 +152,24 @@ if kenteken_input:
             
             is_young_manual = st.checkbox("Youngtimer regeling toepassen?", value=is_young_auto)
             
-            # Youngtimer waarschuwingen
             if is_young_manual and not is_young_auto:
-                st.warning(f"⚠️ **Pas op:** De youngtimer-regeling wordt toegepast, maar dit voertuig is volgens de RDW-gegevens pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
+                st.warning(f"⚠️ **Pas op:** De youngtimer-regeling wordt toegepast, maar dit voertuig voldoet nog niet aan de fiscale leeftijdseis (is {leeftijd.years} jaar oud, 15 jaar vereist).")
             elif is_young_auto and not is_young_manual:
-                st.info(f"💡 **Tip:** Dit voertuig is {leeftijd.years} jaar oud. De youngtimer-regeling (35% bijtelling over dagwaarde) kan fiscaal voordeliger zijn.")
-            elif is_young_manual:
-                st.info("ℹ️ **Youngtimer-regeling:** Bijtelling wordt berekend als 35% over de dagwaarde.")
+                st.info(f"💡 **Youngtimer-melding:** Dit voertuig is {leeftijd.years} jaar oud. De youngtimer-regeling kan van toepassing zijn.")
             
-            idx_bijt = bepaal_bijtelling_index(int(auto['toelating'][:4]), any("elektriciteit" in b for b in auto['brandstoffen']), is_young_manual)
-            gekozen_bijt = st.selectbox("Bijtellingsprofiel", BIJTELLING_OPTIES, index=idx_bijt)
-            
+            gekozen_bijt = st.selectbox("Bijtellingsprofiel", BIJTELLING_OPTIES, index=1 if is_young_manual else 0)
             z_km = st.number_input("Zakelijke km / jaar", value=25000)
             p_km = st.number_input("Privé km / jaar", value=5000)
             totaal_km = z_km + p_km
             
         with col2:
             st.markdown("**Verbruik & Brandstof**")
-            verbruik = st.number_input("Verbruik (L of kWh/100km)", value=auto['rdw_verbruik'])
-            prijs_brand = st.number_input("Prijs p/l of kWh", value=1.95)
+            verbruik = st.number_input("Verbruik (L/100km)", value=auto['rdw_verbruik'])
+            prijs_brand = st.number_input("Prijs per eenheid", value=1.95)
             brandstof_kosten = ((z_km + p_km) / 100) * verbruik * prijs_brand
             
         with col3:
-            st.markdown("**Vaste & Variabele Kosten**")
+            st.markdown("**Vaste Kosten**")
             mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
             mrb = st.number_input("Wegenbelasting (€ / jaar)", value=int(mrb_jaar))
             onderhoud = st.number_input("Onderhoud (€ / jaar)", value=600)
@@ -194,43 +178,60 @@ if kenteken_input:
             lease = st.number_input("Lease/Rente (€ / jaar)", value=0)
 
         if totaal_km > 0 and (z_km / totaal_km) < 0.10:
-            st.error(f"🚨 **Fiscale Eis:** De auto wordt voor {(z_km / totaal_km)*100:.1f}% zakelijk gebruikt. Dit is minder dan de vereiste 10%.")
+            st.error(f"🚨 **Fiscale Eis:** Auto wordt voor {(z_km / totaal_km)*100:.1f}% zakelijk gebruikt. Dit is minder dan de vereiste 10% om de auto als zakelijk vermogen te etiketteren.")
 
+        # --- BEREKENINGEN & MAX BIJTELLING ---
         afschr = (aanschaf * 0.8) * 0.2
         tot_k = brandstof_kosten + mrb + onderhoud + verzekering + overige + afschr + lease
         
-        if is_young_manual: bijt_bedrag = aanschaf * 0.35
+        # Bepaal bruto bijtelling
+        if is_young_manual: 
+            bijt_bruto = aanschaf * 0.35
         else:
-            bijt_perc = float(gekozen_bijt.split("%")[0]) / 100
-            if "€" in gekozen_bijt:
-                cap = float(gekozen_bijt.split("€ ")[1].split(",")[0].replace(".", ""))
-                bijt_bedrag = (min(auto['catalogusprijs'], cap) * bijt_perc) + (max(0, auto['catalogusprijs'] - cap) * 0.22)
-            else: bijt_bedrag = auto['catalogusprijs'] * bijt_perc
+            bijt_perc = 0.22 # Standaard, evt uitbreidbaar
+            bijt_bruto = auto['catalogusprijs'] * bijt_perc
 
-        zak_aftrek = tot_k - bijt_bedrag
+        # Check: Bijtelling mag niet hoger zijn dan totale kosten (maximeringsregel)
+        is_gemaximeerd = bijt_bruto > tot_k
+        bijt_definitief = min(bijt_bruto, tot_k)
+        
+        zak_aftrek = tot_k - bijt_definitief
         pri_aftrek = z_km * 0.23
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
         st.markdown("---")
-        st.subheader("3. Resultaat")
-        st.success(f"💡 **Advies vanuit fiscaal oogpunt: {advies}**")
+        st.subheader("3. Resultaat & Advies")
         
+        # Waarschuwing indien bijtelling gemaximeerd is
+        if is_gemaximeerd:
+            st.warning(f"⚖️ **Maximale bijtelling bereikt:** De berekende bijtelling (€ {fmt(bijt_bruto)}) is hoger dan de totale autokosten (€ {fmt(tot_k)}). De Belastingdienst maximeert de bijtelling in dit geval tot uw werkelijke kosten. Uw definitieve bijtelling wordt afgetopt op € {fmt(bijt_definitief)}, waardoor uw zakelijke aftrekpost op € 0 uitkomt.")
+            
+        st.success(f"💡 **Fiscaal Advies: {advies}**")
+        
+        # Dashboard Weergave Uitsplitsing
         res1, res2 = st.columns(2)
         with res1:
             st.markdown("#### 🏢 Auto Zakelijk")
+            st.write(f"Totale kosten per jaar: **€ {fmt(tot_k)}**")
+            if is_gemaximeerd:
+                st.write(f"Bijtelling (afgetopt op max): **€ {fmt(bijt_definitief)}**")
+            else:
+                st.write(f"Bijtelling: **€ {fmt(bijt_definitief)}**")
             st.metric("Fiscale aftrekpost", f"€ {fmt(zak_aftrek)}")
         with res2:
             st.markdown("#### 🏠 Auto Privé")
+            st.write(f"Vergoeding per zakelijke km: **€ 0,23**")
+            st.write(f"Aantal zakelijke km: **{fmt(z_km)}**")
             st.metric("Fiscale aftrekpost", f"€ {fmt(pri_aftrek)}")
 
-        # --- UITGEBREIDE PDF GENERATIE ---
+        # --- PDF GENERATIE ---
         if gevalideerd:
             def clean(t): return str(t).replace('€', 'EUR').encode('latin-1', 'replace').decode('latin-1')
             class VVAAPDF(FPDF):
                 def header(self):
                     self.set_fill_color(232, 78, 15); self.rect(0, 0, 210, 15, 'F')
-                    logo = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
-                    if os.path.exists(logo): self.image(logo, 10, 20, 35)
+                    l_path = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
+                    if os.path.exists(l_path): self.image(l_path, 10, 20, 35)
                     self.set_xy(10, 32); self.set_font("Arial", 'I', 10); self.cell(0, 10, "In het hart van de gezondheidszorg.", ln=True)
                 def footer(self):
                     self.set_y(-15); self.set_fill_color(0, 49, 92); self.rect(0, 282, 210, 15, 'F')
@@ -266,7 +267,6 @@ if kenteken_input:
             pdf.cell(90, 7, "Auto zakelijk", border='B'); pdf.cell(10, 7); pdf.cell(90, 7, "Auto privé", border='B', ln=True)
             pdf.set_font("Arial", '', 10); pdf.set_text_color(0); pdf.ln(2)
             
-            # Alle rijen netjes gesplitst
             rows = [
                 ("Brandstof/Laad:", f"EUR {fmt(brandstof_kosten)}", "Vergoeding:", f"EUR {fmt(pri_aftrek)}"),
                 ("Wegenbelasting:", f"EUR {fmt(mrb)}", "Zakelijke km:", fmt(z_km)),
@@ -282,7 +282,10 @@ if kenteken_input:
 
             pdf.ln(2); pdf.set_font("Arial", 'B', 10)
             pdf.cell(45, 6, "Totale kosten:"); pdf.cell(45, 6, f"EUR {fmt(tot_k)}", align='R', ln=True)
-            pdf.cell(45, 6, "Bijtelling:"); pdf.cell(45, 6, f"EUR {fmt(bijt_bedrag)}", align='R', ln=True); pdf.ln(2)
+            
+            # Bijtelling weergave in PDF (inclusief waarschuwing indien gemaximeerd)
+            bijtelling_label = "Bijtelling (gemaximeerd):" if is_gemaximeerd else "Bijtelling:"
+            pdf.cell(45, 6, bijtelling_label); pdf.cell(45, 6, f"EUR {fmt(bijt_definitief)}", align='R', ln=True); pdf.ln(2)
             
             pdf.set_fill_color(245, 245, 245)
             pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(zak_aftrek)} ", fill=True, align='R')
@@ -294,13 +297,16 @@ if kenteken_input:
             
             pdf.set_text_color(0, 49, 92); pdf.set_font("Arial", 'B', 10); pdf.cell(0, 5, "Aandachtspunten bij zakelijk rijden:", ln=True)
             pdf.set_font("Arial", '', 8); pdf.set_text_color(0, 0, 0)
+            
             punten = [
                 "- Kosten zijn schattingen gebaseerd op Belastingdienst tarieven 2026.", 
-                "- Houd rekening met het eventuele vervallen van rente op de lening.", 
                 "- Na 5 jaar vervallen de afschrijvingskosten.", 
                 "- Bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming.", 
-                "- Percentage bijtelling geldt voor 60 maanden vanaf datum eerste toelating."
+                "- Percentage bijtelling geldt in principe voor 60 maanden vanaf datum eerste toelating."
             ]
+            if is_gemaximeerd:
+                punten.insert(0, "- LET OP: De bijtelling is gemaximeerd tot de werkelijke totale autokosten.")
+                
             for p in punten: pdf.cell(0, 4, clean(p), ln=True)
 
             bestandsnaam = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
@@ -308,5 +314,4 @@ if kenteken_input:
         else:
             st.info("ℹ️ Vul de Naam en een numeriek Lidnummer in om het rapport te kunnen genereren.")
     else:
-        # Foutmelding voor ongeldig kenteken
-        st.error(f"❌ Geen voertuig gevonden in de RDW-database voor kenteken '{kenteken_input}'. Controleer het kenteken en probeer het opnieuw. Er kan geen berekening worden gemaakt.")
+        st.error(f"❌ Geen voertuig gevonden in de RDW-database voor kenteken '{kenteken_input}'. Controleer het kenteken en probeer het opnieuw.")
