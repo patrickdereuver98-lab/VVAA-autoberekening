@@ -24,7 +24,6 @@ vvaa_css = f"""
         font-family: 'Arial', sans-serif !important;
     }}
     
-    /* VvAA huisstijl tint als basis achtergrond */
     .stApp {{ background-color: {VVAA_LICHTORANJE} !important; }}
     p, label, span, li {{ color: {VVAA_BLAUW} !important; }}
     
@@ -42,7 +41,7 @@ vvaa_css = f"""
         padding: 15px !important;
     }}
 
-    /* --- 4. FIX VOOR INPUTVELDEN & DROPDOWNS --- */
+    /* --- 4. FIX VOOR INPUTVELDEN, DROPDOWNS & CURSOR --- */
     div[data-baseweb="input"] {{
         background-color: #FFFFFF !important;
         border-radius: 6px !important;
@@ -50,6 +49,12 @@ vvaa_css = f"""
     div[data-baseweb="input"] input {{
         color: {VVAA_BLAUW} !important;
         background-color: #FFFFFF !important;
+        caret-color: {VVAA_BLAUW} !important; /* DIT FIXT DE ONZICHTBARE CURSOR */
+    }}
+    
+    /* Forceer hoofdletters specifiek in het kenteken veld */
+    input[aria-label="Kenteken *"] {{
+        text-transform: uppercase !important;
     }}
     
     div[data-baseweb="select"] > div {{ 
@@ -64,11 +69,8 @@ vvaa_css = f"""
         box-shadow: 0 0 0 1px {VVAA_ORANJE} !important;
     }}
 
-    /* DEFINITIEVE DROPDOWN FIX (Overschrijft alle donkere Streamlit thema's) */
-    div[data-baseweb="menu"], 
-    div[data-baseweb="popover"], 
-    div[data-baseweb="popover"] > div, 
-    ul[role="listbox"] {{ 
+    /* DEFINITIEVE DROPDOWN FIX */
+    div[data-baseweb="menu"], div[data-baseweb="popover"], div[data-baseweb="popover"] > div, ul[role="listbox"] {{ 
         background-color: #FFFFFF !important; 
     }}
     ul[role="listbox"] li, li[role="option"] {{ 
@@ -79,9 +81,7 @@ vvaa_css = f"""
         background-color: {VVAA_LICHTORANJE} !important; 
         color: {VVAA_ORANJE} !important; 
     }}
-    ul[role="listbox"] li span, li[role="option"] span {{
-        color: inherit !important;
-    }}
+    ul[role="listbox"] li span, li[role="option"] span {{ color: inherit !important; }}
 
     /* --- 5. KNOPPEN (BUTTONS) --- */
     .stButton>button {{ 
@@ -101,31 +101,32 @@ vvaa_css = f"""
     div.stDownloadButton > button:hover {{ background-color: #001F3F !important; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 49, 92, 0.25) !important; }}
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
     
-    /* --- 6. MELDINGEN & ALERTS --- */
+    /* --- 6. MELDINGEN & ALERTS (Fix voor dubbele banner) --- */
+    /* Maak de buitenste Streamlit container volledig transparant */
     div[data-testid="stAlert"] {{ 
-        background-color: {VVAA_ORANJE} !important; 
+        background-color: transparent !important;
+        background: transparent !important;
         border: none !important; 
-        padding: 15px; 
-        border-radius: 6px; 
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+        padding: 0 !important; 
     }}
+    /* Target de binnenste 'echte' alert box */
+    div[data-testid="stAlert"] > div[role="alert"] {{
+        background-color: {VVAA_ORANJE} !important;
+        color: #FFFFFF !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+    }}
+    /* Forceer alle tekst en iconen binnen de alert naar wit */
     div[data-testid="stAlert"] * {{ color: #FFFFFF !important; }}
+    div[data-testid="stAlert"] svg {{ fill: #FFFFFF !important; }}
     
     div[data-testid="stExpander"] {{ 
         background-color: #FFFFFF !important; 
         border-left: 4px solid {VVAA_ORANJE} !important; 
-        border-radius: 6px; 
-        border: 1px solid #E0E6ED;
+        border-radius: 6px; border: 1px solid #E0E6ED;
     }}
     .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
-
-    /* --- 7. RESULTATEN BOXEN --- */
-    div[data-testid="metric-container"] {{
-        background-color: #FFFFFF; border-left: 5px solid {VVAA_ORANJE}; padding: 15px 20px; 
-        border-radius: 8px; box-shadow: 0px 4px 10px rgba(0, 49, 92, 0.05); border: 1px solid #E0E6ED;
-    }}
-    div[data-testid="metric-container"] label {{ font-size: 15px !important; font-weight: bold; color: {VVAA_BLAUW} !important; }}
-    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{ color: {VVAA_ORANJE} !important; font-weight: 900; font-size: 28px !important; }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
@@ -142,7 +143,6 @@ def haal_actuele_brandstofprijzen():
         e95_match = re.search(r'Euro95 \(E10\).*?€\s*(\d{1},\d{3})', res.text, re.DOTALL)
         diesel_match = re.search(r'Diesel.*?€\s*(\d{1},\d{3})', res.text, re.DOTALL)
         lpg_match = re.search(r'LPG.*?€\s*(\d{1},\d{3})', res.text, re.DOTALL)
-        
         return {
             "benzine": float(e95_match.group(1).replace(',', '.')) if e95_match else 2.05,
             "diesel": float(diesel_match.group(1).replace(',', '.')) if diesel_match else 1.85,
@@ -151,7 +151,6 @@ def haal_actuele_brandstofprijzen():
     except:
         return {"benzine": 2.05, "diesel": 1.85, "lpg": 0.85}
 
-# --- 3. DATA LADEN UIT CSV ---
 @st.cache_data
 def load_mrb_data():
     try:
@@ -164,7 +163,6 @@ df_mrb, df_prov = load_mrb_data()
 # --- 4. MODERNE HEADER LAYOUT ---
 col_logo, col_title = st.columns([1, 5])
 with col_logo:
-    # Aangepast naar het nieuwe transparante PNG bestand
     logo_path = "VvAA_logo.png" 
     if os.path.exists(logo_path):
         st.image(logo_path, width=130) 
@@ -182,11 +180,9 @@ def get_rdw_data(kenteken):
         req_basis = requests.get(url_basis).json()
         req_brandstof = requests.get(url_brandstof).json()
         if not req_basis: return None
-        
         data = req_basis[0]
         brandstoffen = []
         rdw_verbruik_liter = 0.0  
-        
         if req_brandstof:
             for b in req_brandstof:
                 omschrijving = b.get("brandstof_omschrijving", "").lower()
@@ -194,7 +190,6 @@ def get_rdw_data(kenteken):
                 if omschrijving in ["benzine", "diesel", "lpg"]:
                     verbruik = b.get("brandstofverbruik_gecombineerd")
                     if verbruik: rdw_verbruik_liter = float(verbruik)
-                    
         return {
             "merk": data.get("merk", "Onbekend"),
             "handelsbenaming": data.get("handelsbenaming", "Onbekend"),
@@ -282,16 +277,13 @@ if kenteken_input:
         peil_jaar = toel_dt.year
         
         if is_full_ev:
-            start_mnd = toel_dt.month + 1
-            start_jr = toel_dt.year
-            if start_mnd > 12:
-                start_mnd = 1; start_jr += 1
+            start_mnd = toel_dt.month + 1; start_jr = toel_dt.year
+            if start_mnd > 12: start_mnd = 1; start_jr += 1
             start_60mnd_dt = datetime.datetime(start_jr, start_mnd, 1)
             eind_60mnd_dt = start_60mnd_dt + relativedelta(months=60)
             is_vervallen_ev = vandaag >= eind_60mnd_dt
             peil_jaar = eind_60mnd_dt.year if is_vervallen_ev else toel_dt.year
         
-        # Voertuig succesmelding (Aangepast aan styling)
         st.success(f"🚙 **{auto['merk']} ({kenteken_input}) - {auto['handelsbenaming']}** \n\n"
                    f"Brandstof: {brandstof_t} | Toelating: {toelating_nl} ({leeftijd.years} jaar en {leeftijd.months} maanden oud)")
         
@@ -421,6 +413,7 @@ if kenteken_input:
         pri_aftrek = round(z_km * 0.23)
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
+        # --- NIEUWE MODERNE RESULTATEN DASHBOARD ---
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
@@ -429,23 +422,49 @@ if kenteken_input:
                 
             st.success(f"💡 **Conclusie:** Vanuit fiscaal oogpunt is de optie **{advies}**.")
             
-            res1, res2 = st.columns(2)
-            with res1:
-                st.markdown("#### 🏢 Auto Zakelijk")
-                st.write(f"Totale kosten per jaar: **€ {fmt(tot_k)}**")
-                if is_minder_dan_500:
-                    st.write(f"Bijtelling (< 500km privé): **- € 0**")
-                elif is_gemaximeerd:
-                    st.write(f"Bijtelling (afgetopt): **- € {fmt(bijt_definitief)}**")
-                else:
-                    st.write(f"Bijtelling: **- € {fmt(bijt_definitief)}**")
-                st.metric("Fiscale Aftrekpost", f"€ {fmt(zak_aftrek)}")
-            with res2:
-                st.markdown("#### 🏠 Auto Privé")
-                st.write(f"Vergoeding: **€ 0,23 per zakelijke km**")
-                st.write(f"Aantal zakelijke km: **{fmt(z_km)}**")
-                st.write("<br>", unsafe_allow_html=True)
-                st.metric("Fiscale Aftrekpost", f"€ {fmt(pri_aftrek)}")
+            # HTML/CSS Cards voor een veel mooier en moderner resultaat overzicht
+            html_result = f"""
+            <div style='display: flex; gap: 20px; margin-top: 20px; margin-bottom: 20px; flex-wrap: wrap;'>
+                
+                <div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border-left: 1px solid #E0E6ED; border-right: 1px solid #E0E6ED; border-bottom: 1px solid #E0E6ED;'>
+                    <h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem;'><span style='font-size:1.2em;'>🏢</span> Auto Zakelijk</h4>
+                    
+                    <div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 10px;'>
+                        <span style='color: #4A5568;'>Totale kosten per jaar</span>
+                        <strong style='color: {VVAA_BLAUW};'>€ {fmt(tot_k)}</strong>
+                    </div>
+                    <div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 20px;'>
+                        <span style='color: #4A5568;'>Bijtelling {"(afgetopt)" if is_gemaximeerd else ("(< 500km)" if is_minder_dan_500 else "")}</span>
+                        <strong style='color: {VVAA_BLAUW};'>- € {fmt(bijt_definitief)}</strong>
+                    </div>
+                    
+                    <div style='text-align: center; background: {VVAA_LICHTORANJE}; padding: 20px; border-radius: 8px; border: 1px solid #F0D5C9;'>
+                        <span style='color: {VVAA_BLAUW}; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;'>Fiscale Aftrekpost</span>
+                        <h2 style='color: {VVAA_ORANJE}; margin: 8px 0 0 0; font-size: 2.2rem;'>€ {fmt(zak_aftrek)}</h2>
+                    </div>
+                </div>
+
+                <div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border-left: 1px solid #E0E6ED; border-right: 1px solid #E0E6ED; border-bottom: 1px solid #E0E6ED;'>
+                    <h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem;'><span style='font-size:1.2em;'>🏠</span> Auto Privé</h4>
+                    
+                    <div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 10px;'>
+                        <span style='color: #4A5568;'>Vergoeding per km</span>
+                        <strong style='color: {VVAA_BLAUW};'>€ 0,23</strong>
+                    </div>
+                    <div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 20px;'>
+                        <span style='color: #4A5568;'>Aantal zakelijke km</span>
+                        <strong style='color: {VVAA_BLAUW};'>{fmt(z_km)}</strong>
+                    </div>
+                    
+                    <div style='text-align: center; background: {VVAA_LICHTORANJE}; padding: 20px; border-radius: 8px; border: 1px solid #F0D5C9;'>
+                        <span style='color: {VVAA_BLAUW}; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;'>Fiscale Aftrekpost</span>
+                        <h2 style='color: {VVAA_ORANJE}; margin: 8px 0 0 0; font-size: 2.2rem;'>€ {fmt(pri_aftrek)}</h2>
+                    </div>
+                </div>
+                
+            </div>
+            """
+            st.markdown(html_result, unsafe_allow_html=True)
 
         if gevalideerd:
             def clean(t): return str(t).replace('€', 'EUR').encode('latin-1', 'replace').decode('latin-1')
@@ -462,7 +481,6 @@ if kenteken_input:
 
                 def header(self):
                     self.set_fill_color(232, 78, 15); self.rect(0, 0, 210, 15, 'F')
-                    # Aangepast naar het nieuwe transparante PNG bestand
                     logo = "VvAA_logo.png" 
                     if os.path.exists(logo): self.image(logo, 10, 20, 35)
                     
