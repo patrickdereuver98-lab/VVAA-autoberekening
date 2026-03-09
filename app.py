@@ -49,7 +49,7 @@ vvaa_css = f"""
     div[data-baseweb="input"] input {{
         color: {VVAA_BLAUW} !important;
         background-color: #FFFFFF !important;
-        caret-color: {VVAA_BLAUW} !important; /* DIT FIXT DE ONZICHTBARE CURSOR */
+        caret-color: {VVAA_BLAUW} !important; 
     }}
     
     /* Forceer hoofdletters specifiek in het kenteken veld */
@@ -69,19 +69,24 @@ vvaa_css = f"""
         box-shadow: 0 0 0 1px {VVAA_ORANJE} !important;
     }}
 
-    /* DEFINITIEVE DROPDOWN FIX */
-    div[data-baseweb="menu"], div[data-baseweb="popover"], div[data-baseweb="popover"] > div, ul[role="listbox"] {{ 
+    /* --- AGRESSIEVE DROPDOWN FIX --- */
+    /* Target de container die Streamlit helemaal onderaan de HTML injecteert */
+    div[data-baseweb="popover"], 
+    ul[role="listbox"], 
+    ul[data-baseweb="menu"] {{ 
         background-color: #FFFFFF !important; 
+        border: 1px solid #D1D8E0 !important;
     }}
-    ul[role="listbox"] li, li[role="option"] {{ 
+    ul[role="listbox"] li, 
+    li[role="option"] {{ 
         color: {VVAA_BLAUW} !important; 
         background-color: #FFFFFF !important; 
     }}
-    ul[role="listbox"] li:hover, li[role="option"]:hover {{ 
+    ul[role="listbox"] li:hover, 
+    li[role="option"]:hover {{ 
         background-color: {VVAA_LICHTORANJE} !important; 
         color: {VVAA_ORANJE} !important; 
     }}
-    ul[role="listbox"] li span, li[role="option"] span {{ color: inherit !important; }}
 
     /* --- 5. KNOPPEN (BUTTONS) --- */
     .stButton>button {{ 
@@ -101,15 +106,13 @@ vvaa_css = f"""
     div.stDownloadButton > button:hover {{ background-color: #001F3F !important; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 49, 92, 0.25) !important; }}
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
     
-    /* --- 6. MELDINGEN & ALERTS (Fix voor dubbele banner) --- */
-    /* Maak de buitenste Streamlit container volledig transparant */
+    /* --- 6. MELDINGEN & ALERTS --- */
     div[data-testid="stAlert"] {{ 
         background-color: transparent !important;
         background: transparent !important;
         border: none !important; 
         padding: 0 !important; 
     }}
-    /* Target de binnenste 'echte' alert box */
     div[data-testid="stAlert"] > div[role="alert"] {{
         background-color: {VVAA_ORANJE} !important;
         color: #FFFFFF !important;
@@ -117,7 +120,6 @@ vvaa_css = f"""
         padding: 16px !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
     }}
-    /* Forceer alle tekst en iconen binnen de alert naar wit */
     div[data-testid="stAlert"] * {{ color: #FFFFFF !important; }}
     div[data-testid="stAlert"] svg {{ fill: #FFFFFF !important; }}
     
@@ -413,7 +415,7 @@ if kenteken_input:
         pri_aftrek = round(z_km * 0.23)
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
-        # --- NIEUWE MODERNE RESULTATEN DASHBOARD ---
+        # --- NIEUWE MODERNE RESULTATEN DASHBOARD (Gefikst voor Markdown) ---
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
@@ -422,48 +424,40 @@ if kenteken_input:
                 
             st.success(f"💡 **Conclusie:** Vanuit fiscaal oogpunt is de optie **{advies}**.")
             
-            # HTML/CSS Cards voor een veel mooier en moderner resultaat overzicht
-            html_result = f"""
-            <div style='display: flex; gap: 20px; margin-top: 20px; margin-bottom: 20px; flex-wrap: wrap;'>
-                
-                <div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border-left: 1px solid #E0E6ED; border-right: 1px solid #E0E6ED; border-bottom: 1px solid #E0E6ED;'>
-                    <h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem;'><span style='font-size:1.2em;'>🏢</span> Auto Zakelijk</h4>
-                    
-                    <div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 10px;'>
-                        <span style='color: #4A5568;'>Totale kosten per jaar</span>
-                        <strong style='color: {VVAA_BLAUW};'>€ {fmt(tot_k)}</strong>
-                    </div>
-                    <div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 20px;'>
-                        <span style='color: #4A5568;'>Bijtelling {"(afgetopt)" if is_gemaximeerd else ("(< 500km)" if is_minder_dan_500 else "")}</span>
-                        <strong style='color: {VVAA_BLAUW};'>- € {fmt(bijt_definitief)}</strong>
-                    </div>
-                    
-                    <div style='text-align: center; background: {VVAA_LICHTORANJE}; padding: 20px; border-radius: 8px; border: 1px solid #F0D5C9;'>
-                        <span style='color: {VVAA_BLAUW}; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;'>Fiscale Aftrekpost</span>
-                        <h2 style='color: {VVAA_ORANJE}; margin: 8px 0 0 0; font-size: 2.2rem;'>€ {fmt(zak_aftrek)}</h2>
-                    </div>
-                </div>
+            # Let op: GEEN inspringing aan de linkerkant om de Code-Block bug te voorkomen!
+            html_result = f"""<div style='display: flex; gap: 20px; margin-top: 20px; margin-bottom: 20px; flex-wrap: wrap;'>
+<div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
+<h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem;'><span style='font-size:1.2em;'>🏢</span> Auto Zakelijk</h4>
+<div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 10px;'>
+<span style='color: #4A5568;'>Totale kosten per jaar</span>
+<strong style='color: {VVAA_BLAUW};'>€ {fmt(tot_k)}</strong>
+</div>
+<div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 20px;'>
+<span style='color: #4A5568;'>Bijtelling {"(afgetopt)" if is_gemaximeerd else ("(< 500km)" if is_minder_dan_500 else "")}</span>
+<strong style='color: {VVAA_BLAUW};'>- € {fmt(bijt_definitief)}</strong>
+</div>
+<div style='text-align: center; background: {VVAA_LICHTORANJE}; padding: 20px; border-radius: 8px; border: 1px solid #F0D5C9;'>
+<span style='color: {VVAA_BLAUW}; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;'>Fiscale Aftrekpost</span>
+<h2 style='color: {VVAA_ORANJE}; margin: 8px 0 0 0; font-size: 2.2rem;'>€ {fmt(zak_aftrek)}</h2>
+</div>
+</div>
 
-                <div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border-left: 1px solid #E0E6ED; border-right: 1px solid #E0E6ED; border-bottom: 1px solid #E0E6ED;'>
-                    <h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem;'><span style='font-size:1.2em;'>🏠</span> Auto Privé</h4>
-                    
-                    <div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 10px;'>
-                        <span style='color: #4A5568;'>Vergoeding per km</span>
-                        <strong style='color: {VVAA_BLAUW};'>€ 0,23</strong>
-                    </div>
-                    <div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 20px;'>
-                        <span style='color: #4A5568;'>Aantal zakelijke km</span>
-                        <strong style='color: {VVAA_BLAUW};'>{fmt(z_km)}</strong>
-                    </div>
-                    
-                    <div style='text-align: center; background: {VVAA_LICHTORANJE}; padding: 20px; border-radius: 8px; border: 1px solid #F0D5C9;'>
-                        <span style='color: {VVAA_BLAUW}; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;'>Fiscale Aftrekpost</span>
-                        <h2 style='color: {VVAA_ORANJE}; margin: 8px 0 0 0; font-size: 2.2rem;'>€ {fmt(pri_aftrek)}</h2>
-                    </div>
-                </div>
-                
-            </div>
-            """
+<div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
+<h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem;'><span style='font-size:1.2em;'>🏠</span> Auto Privé</h4>
+<div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 10px;'>
+<span style='color: #4A5568;'>Vergoeding per km</span>
+<strong style='color: {VVAA_BLAUW};'>€ 0,23</strong>
+</div>
+<div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 20px;'>
+<span style='color: #4A5568;'>Aantal zakelijke km</span>
+<strong style='color: {VVAA_BLAUW};'>{fmt(z_km)}</strong>
+</div>
+<div style='text-align: center; background: {VVAA_LICHTORANJE}; padding: 20px; border-radius: 8px; border: 1px solid #F0D5C9;'>
+<span style='color: {VVAA_BLAUW}; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;'>Fiscale Aftrekpost</span>
+<h2 style='color: {VVAA_ORANJE}; margin: 8px 0 0 0; font-size: 2.2rem;'>€ {fmt(pri_aftrek)}</h2>
+</div>
+</div>
+</div>"""
             st.markdown(html_result, unsafe_allow_html=True)
 
         if gevalideerd:
