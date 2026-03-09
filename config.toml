@@ -1,0 +1,10 @@
+[theme]
+# Forceer altijd de lichte modus
+base="light"
+
+# VvAA Huisstijl direct in de kern van de app
+primaryColor="#E84E0F"
+backgroundColor="#F9E8DF"
+secondaryBackgroundColor="#FFFFFF"
+textColor="#00315C"
+font="sans serif"
