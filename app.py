@@ -13,6 +13,7 @@ VVAA_ORANJE = "#E84E0F"
 VVAA_BLAUW = "#00315C"
 VVAA_LICHTORANJE = "#F9E8DF" 
 VVAA_GRIJS = "#F4F6F8" 
+VVAA_MELDING_ORANJE = "#FDCEA8" # Nieuwe, zachtere oranje tint voor status-meldingen
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
 
@@ -30,9 +31,21 @@ vvaa_css = f"""
     /* --- 2. MODERNE HEADERS --- */
     h1, h2, h3, h4, h5, h6 {{ color: {VVAA_BLAUW} !important; font-weight: bold !important; }}
     h3 {{ border-bottom: 2px solid {VVAA_ORANJE} !important; padding-bottom: 8px !important; margin-bottom: 20px !important; font-size: 1.3rem !important; }}
-    h4 {{ color: {VVAA_ORANJE} !important; margin-top: 10px !important; margin-bottom: 15px !important; font-size: 1.05rem !important; }}
+    
+    /* --- 3. FIX VOOR UITLIJNING BINNEN KOLOMMEN (Cards) --- */
+    /* Target h4 headers en input containers binnen kolommen voor gelijke uitlijning */
+    [data-testid="column"] h4 {{
+        margin-top: 0 !important;
+        margin-bottom: 10px !important;
+        padding-top: 0 !important;
+    }}
+    
+    [data-testid="column"] div[data-testid="stMarkdownContainer"] p {{
+        margin-bottom: 5px !important;
+        margin-top: 0 !important;
+    }}
 
-    /* --- 3. MODERNE CARDS (Witte vlakken) --- */
+    /* --- 4. MODERNE CARDS (Witte vlakken) --- */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         background-color: #FFFFFF !important;
         border: none !important;
@@ -41,7 +54,7 @@ vvaa_css = f"""
         padding: 15px !important;
     }}
 
-    /* --- 4. FIX VOOR INPUTVELDEN, DROPDOWNS & CURSOR --- */
+    /* --- 5. FIX VOOR INPUTVELDEN, DROPDOWNS & CURSOR --- */
     div[data-baseweb="input"] {{
         background-color: #FFFFFF !important;
         border-radius: 6px !important;
@@ -69,8 +82,7 @@ vvaa_css = f"""
         box-shadow: 0 0 0 1px {VVAA_ORANJE} !important;
     }}
 
-    /* --- AGRESSIEVE DROPDOWN FIX --- */
-    /* Target de container die Streamlit helemaal onderaan de HTML injecteert */
+    /* AGRESSIEVE DROPDOWN FIX */
     div[data-baseweb="popover"], 
     ul[role="listbox"], 
     ul[data-baseweb="menu"] {{ 
@@ -88,7 +100,7 @@ vvaa_css = f"""
         color: {VVAA_ORANJE} !important; 
     }}
 
-    /* --- 5. KNOPPEN (BUTTONS) --- */
+    /* --- 6. KNOPPEN (BUTTONS) --- */
     .stButton>button {{ 
         background-color: {VVAA_ORANJE} !important; color: white !important; 
         border-radius: 6px; border: none; padding: 10px 24px; font-weight: bold; width: 100%; margin-top: 28px;
@@ -106,7 +118,7 @@ vvaa_css = f"""
     div.stDownloadButton > button:hover {{ background-color: #001F3F !important; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 49, 92, 0.25) !important; }}
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
     
-    /* --- 6. MELDINGEN & ALERTS --- */
+    /* --- 7. MELDINGEN & ALERTS (Zachtere kleur) --- */
     div[data-testid="stAlert"] {{ 
         background-color: transparent !important;
         background: transparent !important;
@@ -114,14 +126,16 @@ vvaa_css = f"""
         padding: 0 !important; 
     }}
     div[data-testid="stAlert"] > div[role="alert"] {{
-        background-color: {VVAA_ORANJE} !important;
-        color: #FFFFFF !important;
+        background-color: {VVAA_MELDING_ORANJE} !important; /* NIEUWE LICHTERE KLEUR */
+        color: {VVAA_BLAUW} !important; /* BLAUWE TEKST VOOR CONTRAST */
         border-radius: 8px !important;
         padding: 16px !important;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+        border: 1px solid #F0D5C9 !important;
     }}
-    div[data-testid="stAlert"] * {{ color: #FFFFFF !important; }}
-    div[data-testid="stAlert"] svg {{ fill: #FFFFFF !important; }}
+    /* Forceer alle tekst en iconen binnen de alert naar blauw */
+    div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
+    div[data-testid="stAlert"] svg {{ fill: {VVAA_BLAUW} !important; }}
     
     div[data-testid="stExpander"] {{ 
         background-color: #FFFFFF !important; 
@@ -248,7 +262,8 @@ with st.container(border=True):
 
     colC, colD, colE = st.columns([2, 2, 1])
     with colC: 
-        kenteken_input = st.text_input("Kenteken *").upper()
+        # aria-label gefikst voor CSS targeting en hoofdletters
+        kenteken_input = st.text_input("Kenteken *", key="kenteken_input").upper()
     with colD: 
         prov_lijst = df_prov['provincie'].tolist() if df_prov is not None else ["Gelderland"]
         prov = st.selectbox("Provincie", prov_lijst)
@@ -415,7 +430,7 @@ if kenteken_input:
         pri_aftrek = round(z_km * 0.23)
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
-        # --- NIEUWE MODERNE RESULTATEN DASHBOARD (Gefikst voor Markdown) ---
+        # --- NIEUWE MODERNE RESULTATEN DASHBOARD (Gefikst voor Markdown bug) ---
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
@@ -427,7 +442,7 @@ if kenteken_input:
             # Let op: GEEN inspringing aan de linkerkant om de Code-Block bug te voorkomen!
             html_result = f"""<div style='display: flex; gap: 20px; margin-top: 20px; margin-bottom: 20px; flex-wrap: wrap;'>
 <div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
-<h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem;'><span style='font-size:1.2em;'>🏢</span> Auto Zakelijk</h4>
+<h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; border: none; padding-top: 0;'><span style='font-size:1.2em;'>🏢</span> Auto Zakelijk</h4>
 <div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 10px;'>
 <span style='color: #4A5568;'>Totale kosten per jaar</span>
 <strong style='color: {VVAA_BLAUW};'>€ {fmt(tot_k)}</strong>
@@ -443,7 +458,7 @@ if kenteken_input:
 </div>
 
 <div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
-<h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem;'><span style='font-size:1.2em;'>🏠</span> Auto Privé</h4>
+<h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; border: none; padding-top: 0;'><span style='font-size:1.2em;'>🏠</span> Auto Privé</h4>
 <div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 10px;'>
 <span style='color: #4A5568;'>Vergoeding per km</span>
 <strong style='color: {VVAA_BLAUW};'>€ 0,23</strong>
