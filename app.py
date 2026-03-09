@@ -18,7 +18,7 @@ vvaa_css = f"""
 <style>
     .stApp {{ background-color: #ffffff !important; }}
     .stApp, p, label, div[data-testid="stMarkdownContainer"] > p {{ color: {VVAA_BLAUW} !important; }}
-    h1, h2, h3, h4 {{ color: {VVAA_ORANJE} !important; font-family: 'Arial', sans-serif !important; }}
+    h1, h2, h3, h4, h5, h6 {{ color: {VVAA_ORANJE} !important; font-family: 'Arial', sans-serif !important; }}
     
     .stButton>button {{ 
         background-color: {VVAA_ORANJE} !important; color: white !important; 
@@ -33,6 +33,7 @@ vvaa_css = f"""
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
     
     div[data-testid="stAlert"] {{ background-color: {VVAA_GRIJS} !important; border-left: 5px solid {VVAA_ORANJE} !important; padding: 10px; }}
+    div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
     input, select, div[data-baseweb="select"] > div {{ background-color: #ffffff !important; color: {VVAA_BLAUW} !important; }}
 </style>
 """
@@ -53,7 +54,9 @@ def load_mrb_data():
 
 df_mrb, df_prov = load_mrb_data()
 
-if os.path.exists("vvaa_logo.jpg"):
+if os.path.exists("VvAA-logo-RGB.png"):
+    st.image("VvAA-logo-RGB.png", width=200)
+elif os.path.exists("vvaa_logo.jpg"):
     st.image("vvaa_logo.jpg", width=200)
 
 st.title("Autoberekening zakelijk of privé?")
@@ -84,24 +87,24 @@ def get_rdw_data(kenteken):
         }
     except: return None
 
-# --- 3. REKENLOGICA (2026) ---
+# --- 3. MRB REKENMETHODE (2026) ---
 def bereken_mrb_csv(gewicht, brandstoffen, provincie_naam):
     if df_mrb is None or df_prov is None: return 0
     trede = df_mrb[df_mrb['min_massa'] <= gewicht].iloc[-1]
-    basis_kwartaal = trede['basis_3mnd'] [cite: 21]
+    basis_kwartaal = trede['basis_3mnd']
     extra = 0
     if trede['toeslag_per_100kg'] > 0:
         eenheden = math.ceil((gewicht - trede['drempel']) / 100)
-        extra = eenheden * trede['toeslag_per_100kg'] [cite: 21]
+        extra = eenheden * trede['toeslag_per_100kg']
     basis_totaal = basis_kwartaal + extra
-    opcenten = df_prov[df_prov['provincie'] == provincie_naam]['opcenten'].values[0] [cite: 90]
+    opcenten = df_prov[df_prov['provincie'] == provincie_naam]['opcenten'].values[0]
     mrb_3mnd = basis_totaal + (basis_totaal * (opcenten / 100))
     toeslag = 0
-    if any("diesel" in b for b in brandstoffen): toeslag = 153.00 + (math.ceil(max(0, gewicht-900)/100) * 16.57) [cite: 30]
-    elif any("lpg" in b for b in brandstoffen): toeslag = 172.08 + (math.ceil(max(0, gewicht-900)/100) * 18.22) [cite: 37]
+    if any("diesel" in b for b in brandstoffen): toeslag = 153.00 + (math.ceil(max(0, gewicht-900)/100) * 16.57)
+    elif any("lpg" in b for b in brandstoffen): toeslag = 172.08 + (math.ceil(max(0, gewicht-900)/100) * 18.22)
     jaarbedrag = (mrb_3mnd + toeslag) * 4
     if any("elektriciteit" in b for b in brandstoffen) and not any(x in ["benzine", "diesel"] for x in brandstoffen):
-        jaarbedrag *= 0.75 # 25% betalen in 2026
+        jaarbedrag *= 0.75
     return round(jaarbedrag)
 
 BIJTELLING_OPTIES = [
@@ -160,10 +163,13 @@ if kenteken_input:
             
             is_young_manual = st.checkbox("Youngtimer regeling toepassen?", value=is_young_auto)
             
+            # Youngtimer waarschuwingen
             if is_young_manual and not is_young_auto:
                 st.warning(f"⚠️ **Pas op:** De youngtimer-regeling wordt toegepast, maar dit voertuig is volgens de RDW-gegevens pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
             elif is_young_auto and not is_young_manual:
-                st.info(f"💡 **Tip:** Dit voertuig is ouder dan 15 jaar. De youngtimer-regeling kan fiscaal voordeliger zijn.")
+                st.info(f"💡 **Tip:** Dit voertuig is {leeftijd.years} jaar oud. De youngtimer-regeling (35% bijtelling over dagwaarde) kan fiscaal voordeliger zijn.")
+            elif is_young_manual:
+                st.info("ℹ️ **Youngtimer-regeling:** Bijtelling wordt berekend als 35% over de dagwaarde.")
             
             idx_bijt = bepaal_bijtelling_index(int(auto['toelating'][:4]), any("elektriciteit" in b for b in auto['brandstoffen']), is_young_manual)
             gekozen_bijt = st.selectbox("Bijtellingsprofiel", BIJTELLING_OPTIES, index=idx_bijt)
@@ -188,10 +194,10 @@ if kenteken_input:
             lease = st.number_input("Lease/Rente (€ / jaar)", value=0)
 
         if totaal_km > 0 and (z_km / totaal_km) < 0.10:
-            st.error(f"🚨 **Fiscale Eis:** De auto wordt voor {(z_km / totaal_km)*100:.1f}% zakelijk gebruikt. Dit is minder dan de vereiste 10% om de auto zakelijk te etiketteren.")
+            st.error(f"🚨 **Fiscale Eis:** De auto wordt voor {(z_km / totaal_km)*100:.1f}% zakelijk gebruikt. Dit is minder dan de vereiste 10%.")
 
         afschr = (aanschaf * 0.8) * 0.2
-        totale_kosten_calc = brandstof_kosten + mrb + onderhoud + verzekering + overige + afschr + lease
+        tot_k = brandstof_kosten + mrb + onderhoud + verzekering + overige + afschr + lease
         
         if is_young_manual: bijt_bedrag = aanschaf * 0.35
         else:
@@ -201,13 +207,13 @@ if kenteken_input:
                 bijt_bedrag = (min(auto['catalogusprijs'], cap) * bijt_perc) + (max(0, auto['catalogusprijs'] - cap) * 0.22)
             else: bijt_bedrag = auto['catalogusprijs'] * bijt_perc
 
-        zak_aftrek = totale_kosten_calc - bijt_bedrag
+        zak_aftrek = tot_k - bijt_bedrag
         pri_aftrek = z_km * 0.23
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
         st.markdown("---")
         st.subheader("3. Resultaat")
-        st.success(f"💡 **Fiscaal Advies: {advies}**")
+        st.success(f"💡 **Advies vanuit fiscaal oogpunt: {advies}**")
         
         res1, res2 = st.columns(2)
         with res1:
@@ -222,7 +228,8 @@ if kenteken_input:
             class VVAAPDF(FPDF):
                 def header(self):
                     self.set_fill_color(232, 78, 15); self.rect(0, 0, 210, 15, 'F')
-                    if os.path.exists("vvaa_logo.jpg"): self.image("vvaa_logo.jpg", 10, 20, 35)
+                    logo = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
+                    if os.path.exists(logo): self.image(logo, 10, 20, 35)
                     self.set_xy(10, 32); self.set_font("Arial", 'I', 10); self.cell(0, 10, "In het hart van de gezondheidszorg.", ln=True)
                 def footer(self):
                     self.set_y(-15); self.set_fill_color(0, 49, 92); self.rect(0, 282, 210, 15, 'F')
@@ -266,7 +273,7 @@ if kenteken_input:
                 pdf.cell(45, 5, l2); pdf.cell(45, 5, v2, align='R' if v2 else 'L', ln=True)
 
             pdf.ln(2); pdf.set_font("Arial", 'B', 10)
-            pdf.cell(45, 6, "Totale kosten:"); pdf.cell(45, 6, f"EUR {fmt(totale_kosten_calc)}", align='R', ln=True)
+            pdf.cell(45, 6, "Totale kosten:"); pdf.cell(45, 6, f"EUR {fmt(tot_k)}", align='R', ln=True)
             pdf.cell(45, 6, "Bijtelling:"); pdf.cell(45, 6, f"EUR {fmt(bijt_bedrag)}", align='R', ln=True); pdf.ln(2)
             
             pdf.set_fill_color(245)
@@ -281,7 +288,7 @@ if kenteken_input:
             punten = ["- Kosten zijn schattingen gebaseerd op Belastingdienst tarieven 2026.", "- Houd rekening met het eventuele vervallen van rente op de lening.", "- Na 5 jaar vervallen de afschrijvingskosten.", "- Bij inruil kan een boekwinst ontstaan.", "- Bijtelling geldt voor 60 maanden vanaf datum eerste toelating."]
             for p in punten: pdf.cell(0, 4, clean(p), ln=True)
 
-            fname = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
-            st.download_button("📄 Download Definitief Rapport", data=pdf.output(dest='S').encode('latin-1'), file_name=fname)
+            bestandsnaam = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
+            st.download_button("📄 Download PDF Rapport", data=pdf.output(dest='S').encode('latin-1'), file_name=bestandsnaam)
         else:
-            st.info("ℹ️ Vul de Naam en een numeriek Lidnummer in om het rapport te genereren.")
+            st.info("ℹ️ Vul eerst de Naam en het Lidnummer (cijfers) in om het rapport te kunnen genereren.")
