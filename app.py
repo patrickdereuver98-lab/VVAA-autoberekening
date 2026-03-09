@@ -44,20 +44,8 @@ vvaa_css = f"""
     .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
     div[data-testid="stExpander"] details div {{ color: {VVAA_BLAUW} !important; }}
     
-    /* --- FIX VOOR DE DROPDOWNS EN DARKMODE --- */
     input, select, div[data-baseweb="select"] > div {{ background-color: white !important; color: {VVAA_BLAUW} !important; border-radius: 6px !important; border: 1px solid #ddd !important; }}
     
-    /* Forceer de geselecteerde tekst naar blauw */
-    div[data-baseweb="select"] div[class*="singleValue"] {{ color: {VVAA_BLAUW} !important; }}
-    
-    /* Forceer de uitklaplijst (popover) naar wit */
-    div[data-baseweb="popover"] > div, ul[role="listbox"] {{ background-color: white !important; }}
-    
-    /* Forceer de opties in de lijst naar blauwe tekst op witte achtergrond */
-    ul[role="listbox"] li {{ color: {VVAA_BLAUW} !important; background-color: white !important; }}
-    ul[role="listbox"] li:hover {{ background-color: {VVAA_GRIJS} !important; }}
-    /* --- EINDE FIX --- */
-
     div[data-testid="metric-container"] {{
         background-color: white; border-left: 5px solid {VVAA_ORANJE}; padding: 15px 20px; border-radius: 8px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
     }}
@@ -258,7 +246,7 @@ if kenteken_input:
                 elif not is_full_ev and is_ev:
                     st.info("ℹ️ **Hybride auto:** 22% standaard bijtellingstarief is van toepassing.")
                 if is_vervallen_ev and not is_young_manual:
-                    st.info(f"⚡ **Let op:** 60-maandenregel EV vervallen. Regels {peil_jaar} toegepast.")
+                    st.info(f"⚡ **Let op: 60-maandenregel EV vervallen. Regels {peil_jaar} toegepast.**")
 
             st.markdown("---")
             st.markdown("### 💶 Financiële Specificaties")
@@ -355,7 +343,6 @@ if kenteken_input:
         pri_aftrek = z_km * 0.23
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
-        # CARD 3: Resultaat
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
@@ -421,12 +408,12 @@ if kenteken_input:
 
             pdf.set_font(f, 'B', 11); pdf.set_text_color(232, 78, 15); pdf.cell(200, 6, "2. Voertuigspecificaties", ln=True)
             pdf.set_font(f, '', 10); pdf.set_text_color(0); pdf.set_fill_color(245)
-            pdf.cell(35, 6, " Merk & Type:", fill=True); pdf.cell(155, 6, clean(f"{auto['merk']} {auto['handelsbenaming']} ({kenteken_input.upper()})"), fill=True, ln=True)
-            pdf.cell(35, 6, " Brandstof:", fill=True); pdf.cell(155, 6, brandstof_t, fill=True, ln=True)
-            pdf.cell(35, 6, " Eerste toelating:", fill=True); pdf.cell(155, 6, f"{toelating_nl} ({leeftijd.years} jaar, {leeftijd.months} mnd)", fill=True, ln=True)
-            pdf.cell(35, 6, " Youngtimer:", fill=True); pdf.cell(155, 6, "Ja" if is_young_manual else "Nee", fill=True, ln=True)
-            pdf.cell(35, 6, " < 500 km prive:", fill=True); pdf.cell(155, 6, "Ja (Geen bijtelling)" if is_minder_dan_500 else "Nee", fill=True, ln=True)
-            pdf.cell(35, 6, " Lease auto:", fill=True); pdf.cell(155, 6, "Ja" if is_geleased else "Nee", fill=True, ln=True); pdf.ln(2)
+            pdf.cell(35, 6, " Merk & Type:"); pdf.cell(155, 6, clean(f"{auto['merk']} {auto['handelsbenaming']} ({kenteken_input.upper()})"), fill=True, ln=True)
+            pdf.cell(35, 6, " Brandstof:"); pdf.cell(155, 6, brandstof_t, fill=True, ln=True)
+            pdf.cell(35, 6, " Eerste toelating:"); pdf.cell(155, 6, f"{toelating_nl} ({leeftijd.years} jaar, {leeftijd.months} mnd)", fill=True, ln=True)
+            pdf.cell(35, 6, " Youngtimer:"); pdf.cell(155, 6, "Ja" if is_young_manual else "Nee", fill=True, ln=True)
+            pdf.cell(35, 6, " < 500 km prive:"); pdf.cell(155, 6, "Ja (Geen bijtelling)" if is_minder_dan_500 else "Nee", fill=True, ln=True)
+            pdf.cell(35, 6, " Lease auto:"); pdf.cell(155, 6, "Ja" if is_geleased else "Nee", fill=True, ln=True); pdf.ln(2)
             
             pdf.cell(45, 5, "Cataloguswaarde:"); pdf.cell(45, 5, f"EUR {fmt(auto['catalogusprijs'])}", align='R')
             pdf.cell(10, 5); pdf.cell(45, 5, "Aanschafwaarde:"); pdf.cell(45, 5, f"EUR {fmt(aanschaf)}", align='R', ln=True)
