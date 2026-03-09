@@ -17,7 +17,7 @@ st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="w
 
 vvaa_css = f"""
 <style>
-    /* Algemene scaling: alles iets kleiner */
+    /* Algemene scaling: alles iets kleiner voor beter overzicht */
     html, body, [class*="st-"] {{
         font-size: 0.9rem !important;
     }}
@@ -34,10 +34,12 @@ vvaa_css = f"""
     .stButton>button:hover {{ background-color: #c7400a !important; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }}
     .stButton>button p, .stButton>button span {{ color: white !important; }}
     
+    /* ZICHTBAARHEID DOWNLOADKNOP */
     div.stDownloadButton > button {{ 
         background-color: {VVAA_BLAUW} !important; color: white !important; border-radius: 8px !important;
         padding: 15px 32px !important; font-size: 18px !important; font-weight: bold !important; width: 100% !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 2px solid {VVAA_BLAUW} !important; transition: 0.3s;
+        display: block !important;
     }}
     div.stDownloadButton > button:hover {{ background-color: #001f3f !important; box-shadow: 0 6px 12px rgba(0,0,0,0.2); }}
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
@@ -49,9 +51,8 @@ vvaa_css = f"""
     .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
     div[data-testid="stExpander"] details div {{ color: {VVAA_BLAUW} !important; }}
     
-    /* --- FIX VOOR DE DROPDOWNS: Altijd wit met blauwe tekst --- */
+    /* DROPDOWN FIX: Altijd wit met blauwe tekst */
     input, select, div[data-baseweb="select"] > div {{ background-color: white !important; color: {VVAA_BLAUW} !important; border-radius: 6px !important; border: 1px solid #ddd !important; }}
-    
     div[data-baseweb="select"] div[class*="singleValue"] {{ color: {VVAA_BLAUW} !important; }}
     div[data-baseweb="popover"] > div, ul[role="listbox"] {{ background-color: white !important; }}
     ul[role="listbox"] li {{ color: {VVAA_BLAUW} !important; background-color: white !important; }}
@@ -97,7 +98,7 @@ def load_mrb_data():
 
 df_mrb, df_prov = load_mrb_data()
 
-# --- 4. MODERNE HEADER LAYOUT ---
+# --- 4. HEADER LAYOUT ---
 col_logo, col_title = st.columns([1, 4])
 with col_logo:
     logo_path = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
@@ -265,7 +266,6 @@ if kenteken_input:
             st.markdown("---")
             st.markdown("### 💶 Financiële Specificaties")
             
-            # --- FINANCIELE SPECIFICATIES ---
             col1, col2, col3 = st.columns(3)
             
             with col1:
@@ -337,7 +337,7 @@ if kenteken_input:
                 calc_onderhoud = round(totaal_km * 0.04) if gebruik_schatting else 0
                 
                 onderhoud = st.number_input("Onderhoud (€ / jaar)", value=float(calc_onderhoud))
-                verzekering = st.number_input("Verzekering (€ / jaar)", value=0.0, help="Te persoonlijk om in te schatten. Vul uw eigen premie in.")
+                verzekering = st.number_input("Verzekering (€ / jaar)", value=0.0)
                 overige = st.number_input("Overige kosten (€ / jaar)", value=250.0 if gebruik_schatting else 0.0)
                 
                 # Nieuwe Lease / Rente velden (afhankelijk van top vinkje)
@@ -362,7 +362,6 @@ if kenteken_input:
         pri_aftrek = round(z_km * 0.23)
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
-        # CARD 3: Resultaat
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
@@ -386,7 +385,7 @@ if kenteken_input:
                 st.markdown("#### 🏠 Auto Privé")
                 st.write(f"Vergoeding: **€ 0,23 per zakelijke km**")
                 st.write(f"Aantal zakelijke km: **{fmt(z_km)}**")
-                st.write("<br>", unsafe_allow_html=True) # Witregel voor uitlijning
+                st.write("<br>", unsafe_allow_html=True)
                 st.metric("Fiscale Aftrekpost", f"€ {fmt(pri_aftrek)}")
 
         if gevalideerd:
@@ -408,11 +407,14 @@ if kenteken_input:
                     if os.path.exists(logo): self.image(logo, 10, 20, 35)
                     self.set_xy(10, 32); 
                     self.set_font(self.font_fam, '', 10); 
-                    self.cell(0, 10, "In het hart van de gezondheidszorg.", ln=True)
+                    # PDF HEADER FIX: VvAA
+                    self.cell(0, 10, clean("In het hart van de gezondheidszorg."), ln=True)
                     
                 def footer(self):
                     self.set_y(-15); self.set_fill_color(0, 49, 92); self.rect(0, 282, 210, 15, 'F')
-                    self.set_text_color(255); self.set_font(self.font_fam, '', 9); self.cell(0, 15, "VvAA | www.vvaa.nl | Voor zorgverleners, door zorgverleners", align='C', ln=True)
+                    self.set_text_color(255); self.set_font(self.font_fam, '', 9); 
+                    # PDF FOOTER FIX: vvaa.nl
+                    self.cell(0, 15, clean("VvAA | www.vvaa.nl | Voor zorgverleners, door zorgverleners"), align='C', ln=True)
 
             pdf = VVAAPDF(); pdf.set_auto_page_break(auto=False); pdf.add_page()
             f = pdf.font_fam
@@ -430,13 +432,13 @@ if kenteken_input:
             pdf.set_font(f, '', 10); pdf.set_text_color(0); pdf.set_fill_color(245)
             pdf.cell(35, 6, " Merk & Type:", fill=True); pdf.cell(155, 6, clean(f"{auto['merk']} {auto['handelsbenaming']} ({kenteken_input})"), fill=True, ln=True)
             pdf.cell(35, 6, " Brandstof:", fill=True); pdf.cell(155, 6, brandstof_t, fill=True, ln=True)
-            pdf.cell(35, 6, " Eerste toelating:", fill=True); pdf.cell(155, 6, f"{toelating_nl} ({leeftijd.years} jaar, {leeftijd.months} mnd)", fill=True, ln=True)
+            pdf.cell(35, 6, " Eerste toelating:", fill=True); pdf.cell(155, 6, clean(f"{toelating_nl} ({leeftijd.years} jaar, {leeftijd.months} mnd)"), fill=True, ln=True)
             pdf.cell(35, 6, " Youngtimer:", fill=True); pdf.cell(155, 6, "Ja" if is_young_manual else "Nee", fill=True, ln=True)
             pdf.cell(35, 6, " < 500 km prive:", fill=True); pdf.cell(155, 6, "Ja (Geen bijtelling)" if is_minder_dan_500 else "Nee", fill=True, ln=True)
             pdf.cell(35, 6, " Lease auto:", fill=True); pdf.cell(155, 6, "Ja" if is_geleased else "Nee", fill=True, ln=True); pdf.ln(2)
             
-            pdf.cell(45, 5, "Cataloguswaarde:"); pdf.cell(45, 5, f"EUR {fmt(auto['catalogusprijs'])}", align='R')
-            pdf.cell(10, 5); pdf.cell(45, 5, "Aanschafwaarde:"); pdf.cell(45, 5, f"EUR {fmt(aanschaf)}", align='R', ln=True)
+            pdf.cell(45, 5, "Cataloguswaarde:"); pdf.cell(45, 5, clean(f"EUR {fmt(auto['catalogusprijs'])}"), align='R')
+            pdf.cell(10, 5); pdf.cell(45, 5, "Aanschafwaarde:"); pdf.cell(45, 5, clean(f"EUR {fmt(aanschaf)}"), align='R', ln=True)
             pdf.cell(45, 5, "Bijtellingsprofiel:"); pdf.set_font(f, '', 9); pdf.cell(145, 5, clean(gekozen_bijt), ln=True); pdf.ln(3)
 
             pdf.set_font(f, 'B', 11); pdf.set_text_color(232, 78, 15)
@@ -444,24 +446,19 @@ if kenteken_input:
             pdf.set_font(f, '', 10); pdf.set_text_color(0); pdf.ln(2)
             
             left_col = []
-            if is_brandstof or (not is_brandstof and not is_ev): left_col.append(("Brandstofkosten:", f"EUR {fmt(brandstof_kosten)}"))
-            if is_ev: left_col.append(("Laadkosten:", f"EUR {fmt(laad_kosten)}"))
-            
-            left_col.extend([
-                ("Wegenbelasting:", f"EUR {fmt(mrb)}"), 
-                ("Onderhoud:", f"EUR {fmt(onderhoud)}"), 
-                ("Verzekering:", f"EUR {fmt(verzekering)}"), 
-                ("Overige autokosten:", f"EUR {fmt(overige)}"), 
-                ("Afschrijving:", f"EUR {fmt(afschr)}")
-            ])
+            left_col.append(("Brandstofkosten:", clean(f"EUR {fmt(brandstof_kosten+laad_kosten)}")))
+            left_col.append(("Wegenbelasting:", clean(f"EUR {fmt(mrb)}")))
+            # PDF VALUE FIX: 0
+            left_col.append(("Onderhoud:", clean(f"EUR {int(round(onderhoud))}")))
+            left_col.append(("Verzekering:", clean(f"EUR {int(round(verzekering))}")))
+            left_col.append(("Overige autokosten:", clean(f"EUR {fmt(overige)}")))
+            left_col.append(("Afschrijving:", clean(f"EUR {fmt(afschr)}")))
             
             if is_geleased:
-                left_col.extend([
-                    ("Leasekosten:", f"EUR {fmt(lease_kosten)}"),
-                    ("Rentekosten:", f"EUR {fmt(rente_kosten)}")
-                ])
+                left_col.append(("Leasekosten:", clean(f"EUR {fmt(lease_kosten)}")))
+                left_col.append(("Rentekosten:", clean(f"EUR {fmt(rente_kosten)}")))
             
-            right_col = [("Vergoeding:", f"EUR {fmt(pri_aftrek)}"), ("Zakelijke km:", fmt(z_km)), ("Tarief p/km:", "EUR 0,23")]
+            right_col = [("Vergoeding:", clean(f"EUR {fmt(pri_aftrek)}")), ("Zakelijke km:", fmt(z_km)), ("Tarief p/km:", "EUR 0,23")]
             
             max_rows = max(len(left_col), len(right_col))
             for i in range(max_rows):
@@ -471,14 +468,14 @@ if kenteken_input:
                 pdf.cell(45, 5, l2); pdf.cell(45, 5, v2, align='R' if v2 else 'L', ln=True)
 
             pdf.ln(2); pdf.set_font(f, 'B', 10)
-            pdf.cell(45, 6, "Totale kosten:"); pdf.cell(45, 6, f"EUR {fmt(tot_k)}", align='R', ln=True)
+            pdf.cell(45, 6, "Totale kosten:"); pdf.cell(45, 6, clean(f"EUR {fmt(tot_k)}"), align='R', ln=True)
             
             lbl_bijt = "Bijtelling (gemaximeerd):" if is_gemaximeerd else ("Bijtelling (< 500km):" if is_minder_dan_500 else "Bijtelling:")
-            pdf.cell(45, 6, lbl_bijt); pdf.cell(45, 6, f"- EUR {fmt(bijt_definitief)}", align='R', ln=True); pdf.ln(2)
+            pdf.cell(45, 6, lbl_bijt); pdf.cell(45, 6, clean(f"- EUR {fmt(bijt_definitief)}"), align='R', ln=True); pdf.ln(2)
             
             pdf.set_fill_color(245)
-            pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(zak_aftrek)} ", fill=True, align='R')
-            pdf.cell(10, 8); pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(pri_aftrek)} ", fill=True, align='R', ln=True); pdf.ln(5)
+            pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, clean(f"EUR {fmt(zak_aftrek)} "), fill=True, align='R')
+            pdf.cell(10, 8); pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, clean(f"EUR {fmt(pri_aftrek)} "), fill=True, align='R', ln=True); pdf.ln(5)
             
             pdf.set_fill_color(232, 78, 15); pdf.set_text_color(255, 255, 255); pdf.set_font(f, 'B', 11)
             pdf.cell(190, 10, clean(f"  Advies vanuit fiscaal oogpunt: {advies}"), fill=True, ln=True); pdf.ln(4)
@@ -494,8 +491,6 @@ if kenteken_input:
             ]
             if is_minder_dan_500:
                 punten.insert(0, "- LET OP: Voor 0% bijtelling is een sluitende rittenadministratie of verklaring vereist.")
-            if peil_jaar > toel_dt.year:
-                punten.insert(0, f"- LET OP: De 60-maandenregel voor deze EV is verlopen. Tarief van {peil_jaar} is toegepast.")
             if is_gemaximeerd:
                 punten.insert(0, "- LET OP: De berekende bijtelling was hoger dan de totale kosten, en is daarom gemaximeerd.")
                 
