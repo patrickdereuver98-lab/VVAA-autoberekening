@@ -13,6 +13,7 @@ VVAA_ORANJE = "#E84E0F"
 VVAA_BLAUW = "#00315C"
 VVAA_LICHTORANJE = "#F9E8DF" 
 VVAA_GRIJS = "#F4F6F8" 
+VVAA_MELDING_ORANJE = "#FDCEA8"
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
 
@@ -32,7 +33,13 @@ vvaa_css = f"""
     h3 {{ border-bottom: 2px solid {VVAA_ORANJE} !important; padding-bottom: 8px !important; margin-bottom: 20px !important; font-size: 1.3rem !important; }}
     
     /* Uitlijning fix voor de kolommen */
-    [data-testid="column"] h4 {{ margin-top: 0 !important; margin-bottom: 12px !important; padding-top: 0 !important; font-size: 1.05rem !important; color: {VVAA_ORANJE} !important; }}
+    [data-testid="column"] h4 {{
+        margin-top: 0 !important;
+        margin-bottom: 12px !important;
+        padding-top: 0 !important;
+        font-size: 1.05rem !important;
+        color: {VVAA_ORANJE} !important;
+    }}
 
     /* --- 3. MODERNE CARDS (Witte vlakken) --- */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
@@ -72,9 +79,22 @@ vvaa_css = f"""
     }}
 
     /* AGRESSIEVE DROPDOWN FIX */
-    div[data-baseweb="popover"], ul[role="listbox"], ul[data-baseweb="menu"] {{ background-color: #FFFFFF !important; border: 1px solid #D1D8E0 !important; }}
-    ul[role="listbox"] li, li[role="option"] {{ color: {VVAA_BLAUW} !important; background-color: #FFFFFF !important; }}
-    ul[role="listbox"] li:hover, li[role="option"]:hover {{ background-color: {VVAA_LICHTORANJE} !important; color: {VVAA_ORANJE} !important; }}
+    div[data-baseweb="popover"], 
+    ul[role="listbox"], 
+    ul[data-baseweb="menu"] {{ 
+        background-color: #FFFFFF !important; 
+        border: 1px solid #D1D8E0 !important;
+    }}
+    ul[role="listbox"] li, 
+    li[role="option"] {{ 
+        color: {VVAA_BLAUW} !important; 
+        background-color: #FFFFFF !important; 
+    }}
+    ul[role="listbox"] li:hover, 
+    li[role="option"]:hover {{ 
+        background-color: {VVAA_LICHTORANJE} !important; 
+        color: {VVAA_ORANJE} !important; 
+    }}
 
     /* --- 5. KNOPPEN (BUTTONS) --- */
     .stButton>button {{ 
@@ -88,28 +108,37 @@ vvaa_css = f"""
     div.stDownloadButton > button {{ 
         background-color: {VVAA_BLAUW} !important; color: white !important; border-radius: 8px !important;
         padding: 15px 32px !important; font-size: 18px !important; font-weight: bold !important; width: 100% !important;
-        box-shadow: 0 4px 6px rgba(0, 49, 92, 0.15) !important; border: none !important; transition: all 0.3s ease; display: block !important;
+        box-shadow: 0 4px 6px rgba(0, 49, 92, 0.15) !important; border: none !important; transition: all 0.3s ease;
+        display: block !important;
     }}
     div.stDownloadButton > button:hover {{ background-color: #001F3F !important; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 49, 92, 0.25) !important; }}
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
     
-    /* --- 6. MELDINGEN & ALERTS (Fris en Strak) --- */
+    /* --- 6. MELDINGEN & ALERTS --- */
     div[data-testid="stAlert"] {{ 
-        background-color: transparent !important; background: transparent !important; border: none !important; padding: 0 !important; margin-bottom: 15px !important;
+        background-color: transparent !important;
+        background: transparent !important;
+        border: none !important; 
+        padding: 0 !important; 
     }}
     div[data-testid="stAlert"] > div[role="alert"] {{
-        background-color: #FFFFFF !important;
-        border-left: 5px solid {VVAA_ORANJE} !important;
-        border-top: 1px solid #E0E6ED !important; border-right: 1px solid #E0E6ED !important; border-bottom: 1px solid #E0E6ED !important;
-        border-radius: 6px !important;
+        background-color: {VVAA_MELDING_ORANJE} !important; 
+        color: {VVAA_BLAUW} !important; 
+        border-radius: 8px !important;
         padding: 16px !important;
-        box-shadow: 0 2px 8px rgba(0, 49, 92, 0.05) !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+        border: 1px solid #F0D5C9 !important;
     }}
-    div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; font-weight: 500; }}
-    div[data-testid="stAlert"] svg {{ fill: {VVAA_ORANJE} !important; }}
+    div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
+    div[data-testid="stAlert"] svg {{ fill: {VVAA_BLAUW} !important; }}
     
-    div[data-testid="stExpander"] {{ background-color: #FFFFFF !important; border-left: 4px solid {VVAA_ORANJE} !important; border-radius: 6px; border: 1px solid #E0E6ED; }}
-    .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
+    div[data-testid="stExpander"] {{ 
+        background-color: #FFFFFF !important; 
+        border-left: 4px solid {VVAA_ORANJE} !important; 
+        border-radius: 6px; border: 1px solid #E0E6ED;
+        margin-bottom: 15px !important;
+    }}
+    .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; padding-top: 8px !important; padding-bottom: 8px !important;}}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
@@ -229,7 +258,7 @@ with st.container(border=True):
 
     colC, colD, colE = st.columns([2, 2, 1])
     with colC: 
-        kenteken_input = st.text_input("Kenteken *").upper()
+        kenteken_input = st.text_input("Kenteken *", key="kenteken_input").upper()
     with colD: 
         prov_lijst = df_prov['provincie'].tolist() if df_prov is not None else ["Gelderland"]
         prov = st.selectbox("Provincie", prov_lijst)
@@ -289,15 +318,15 @@ if kenteken_input:
             with top3:
                 st.markdown("#### Meldingen")
                 if is_minder_dan_500:
-                    st.info("Er is aangegeven dat er minder dan 500 km privé wordt gereden. Hiervoor dient een sluitende rittenadministratie aanwezig te zijn of er is een verklaring 'geen privégebruik auto' nodig.")
+                    st.info("ℹ️ Er is aangegeven dat er minder dan 500 km privé wordt gereden. Hiervoor dient een sluitende rittenadministratie aanwezig te zijn of er is een verklaring 'geen privégebruik auto' nodig.")
                 if totaal_km > 0 and (z_km / totaal_km) < 0.10:
-                    st.warning(f"De auto wordt voor slechts {(z_km / totaal_km)*100:.1f}% zakelijk gebruikt. Minimaal 10% zakelijk gebruik is vereist om de auto op de zaak te mogen zetten.")
+                    st.warning(f"⚠️ De auto wordt voor slechts {(z_km / totaal_km)*100:.1f}% zakelijk gebruikt. Minimaal 10% zakelijk gebruik is vereist om de auto op de zaak te mogen zetten.")
                 if is_young_manual and not is_young_auto:
-                    st.warning(f"Let op: Het voertuig is pas {leeftijd.years} jaar oud. Voor de youngtimer-regeling moet de auto minstens 15 jaar geleden toegelaten zijn.")
+                    st.warning(f"⚠️ Let op: Het voertuig is pas {leeftijd.years} jaar oud. Voor de youngtimer-regeling moet de auto minstens 15 jaar geleden toegelaten zijn.")
                 elif is_young_auto and not is_young_manual:
                     st.info(f"💡 Tip: Dit voertuig is ouder dan 15 jaar. De youngtimer-regeling is waarschijnlijk voordeliger.")
                 if is_vervallen_ev and not is_young_manual:
-                    st.info(f"Let op: De 60-maandenregel voor deze EV is verlopen. De regels van peiljaar {peil_jaar} zijn toegepast.")
+                    st.info(f"⚡ Let op: De 60-maandenregel voor deze EV is verlopen. De regels van peiljaar {peil_jaar} zijn toegepast.")
 
             st.markdown("---")
             st.markdown("### 💶 Financiële Specificaties")
@@ -306,7 +335,12 @@ if kenteken_input:
             
             with col1:
                 st.markdown("#### Waarde & Bijtelling")
-                # Vaste div hoogte voor uitlijning
+                
+                # Expander in elke kolom zorgt voor gelijke uitlijning van de rest eronder
+                with st.expander("ℹ️ Uitleg Waarde & Bijtelling"):
+                    st.write("Selecteer het juiste bijtellingsprofiel. De berekende bijtelling wordt automatisch gemaximeerd (afgetopt) als deze onverhoopt hoger uitvalt dan de totale werkelijke autokosten.")
+                
+                # Vaste div hoogte voor de rest van de uitlijning
                 st.markdown(f"<div style='height: 35px; display: flex; align-items: center;'><strong>Cataloguswaarde (RDW):</strong>&nbsp;€ {fmt(auto['catalogusprijs'])}</div>", unsafe_allow_html=True)
                 
                 aanschaf = st.number_input("Aanschafwaarde / Dagwaarde (€)", value=int(auto['catalogusprijs']))
@@ -324,19 +358,23 @@ if kenteken_input:
                     else: 
                         calc_bijt = auto['catalogusprijs'] * bijt_perc
                 
-                # Tekst opgeschoond
                 bijt_bruto = st.number_input("Bijtelling per jaar (€)", value=float(round(calc_bijt)))
                 
             with col2:
                 st.markdown("#### Verbruik & Brandstof")
+                
+                with st.expander("ℹ️ Uitleg Brandstof & Bron"):
+                    st.write("De voorgestelde literprijs is gebaseerd op de actuele gemiddelde landelijke adviesprijs (bron: UnitedConsumers). De kosten worden berekend via de formule: *(Totale km / 100) × Verbruik × Literprijs*.")
+                
                 brandstof_kosten = 0.0
                 laad_kosten = 0.0
                 actuele_prijzen = haal_actuele_brandstofprijzen()
                 
                 if is_brandstof or (not is_brandstof and not is_ev):
-                    # Vaste div hoogte voor uitlijning met de andere kolommen
-                    st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Actuele brandstofprijzen ingeladen.</div>", unsafe_allow_html=True)
+                    if auto['rdw_verbruik'] == 0.0:
+                        st.info("ℹ️ RDW verbruik onbekend. Vul zelf in.")
                     
+                    st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Actuele brandstofprijzen ingeladen.</div>", unsafe_allow_html=True)
                     verbruik_l = st.number_input("Verbruik (L/100km)", value=float(auto['rdw_verbruik']))
                     
                     bs_lower = [b.lower() for b in auto['brandstoffen']]
@@ -350,6 +388,7 @@ if kenteken_input:
                     brandstof_kosten = st.number_input("Brandstofkosten per jaar (€)", value=brandstof_kosten)
                 
                 if is_ev:
+                    if not is_brandstof: st.info("ℹ️ Stroomverbruik onbekend. Vul zelf in (bijv. 18.0).")
                     st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Stroomprijs berekend op € 0,40 / kWh.</div>", unsafe_allow_html=True)
                     verbruik_kwh = st.number_input("Verbruik Stroom (kWh/100km)", value=0.0)
                     price_kwh = 0.40
@@ -360,13 +399,14 @@ if kenteken_input:
             with col3:
                 st.markdown("#### Vaste Kosten")
                 
-                # Checkbox direct naar boven voor perfecte uitlijning met col1 en col2
+                with st.expander("ℹ️ Uitleg Kosten Schatting"):
+                    st.write("- **Wegenbelasting:** Automatisch berekend o.b.v. RDW data en provincie.\n- **Onderhoud (schatting):** Berekent € 0,04 per gereden km.\n- **Overig (schatting):** Vaste aanname € 250,- per jaar.")
+                
+                # Checkbox uitgelijnd met de 35px divs van col1 en col2
                 gebruik_schatting = st.checkbox("🧮 Vaste kosten schatting toepassen?", value=False)
                 
                 mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
                 mrb = st.number_input("Wegenbelasting per jaar (€)", value=int(mrb_jaar))
-                # Disclaimer MRB
-                st.caption("ℹ️ *Wegenbelasting is berekend o.b.v. RDW voertuiggegevens en provincie.*")
                 
                 calc_onderhoud = round(totaal_km * 0.04) if gebruik_schatting else 0
                 onderhoud = st.number_input("Onderhoud per jaar (€)", value=float(calc_onderhoud))
@@ -391,7 +431,6 @@ if kenteken_input:
         pri_aftrek = round(z_km * 0.23)
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
-        # --- NIEUWE MODERNE RESULTATEN DASHBOARD ---
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
