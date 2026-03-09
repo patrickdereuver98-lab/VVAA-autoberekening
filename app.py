@@ -29,7 +29,6 @@ vvaa_css = f"""
         font-family: 'Arial', sans-serif;
     }}
     
-    /* Enkel kleur toepassen, font-family agressie weglaten om "_arro" icon bug te fixen */
     p, label, span, li {{ color: {VVAA_BLAUW} !important; }}
     
     /* --- 2. MODERNE HEADERS --- */
@@ -136,13 +135,35 @@ vvaa_css = f"""
     div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
     div[data-testid="stAlert"] svg {{ fill: {VVAA_BLAUW} !important; }}
     
+    /* --- 7. EXPANDER (UITKLAPMENU) FIX --- */
     div[data-testid="stExpander"] {{ 
         background-color: #FFFFFF !important; 
         border-left: 4px solid {VVAA_ORANJE} !important; 
-        border-radius: 6px; border: 1px solid #E0E6ED;
+        border-radius: 6px; 
+        border: 1px solid #E0E6ED !important;
         margin-bottom: 15px !important;
     }}
-    .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; padding-top: 8px !important; padding-bottom: 8px !important;}}
+    
+    /* Forceer de header van de expander altijd naar wit, ongeacht klikken/focus/open/dicht */
+    div[data-testid="stExpander"] details summary,
+    div[data-testid="stExpander"] details summary:hover,
+    div[data-testid="stExpander"] details summary:focus,
+    div[data-testid="stExpander"] details summary:active {{
+        background-color: #FFFFFF !important;
+        color: {VVAA_BLAUW} !important;
+    }}
+    
+    /* Forceer de tekst en het icoontje binnen de header naar VvAA Blauw */
+    div[data-testid="stExpander"] details summary * {{
+        color: {VVAA_BLAUW} !important;
+        fill: {VVAA_BLAUW} !important;
+        font-weight: bold;
+    }}
+    
+    /* Zorg dat het opengeklapte witte vlak netjes blijft */
+    div[data-testid="stExpander"] details > div {{
+        background-color: #FFFFFF !important;
+    }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
