@@ -39,10 +39,20 @@ vvaa_css = f"""
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
 
+# --- 2. DOMEIN BEVEILIGING (Optioneel voor later) ---
+def check_auth():
+    if not st.user.email:
+        st.warning("Gelieve in te loggen met uw VvAA e-mailadres.")
+        st.stop()
+    if not st.user.email.lower().endswith("@vvaa.nl"):
+        st.error("Toegang geweigerd. Gebruik een @vvaa.nl account.")
+        st.stop()
+# check_auth()
+
 def fmt(val):
     return f"{int(round(val)):,}".replace(",", ".")
 
-# --- 2. DATA LADEN UIT CSV (Tarieven 2026) ---
+# --- 3. DATA LADEN UIT CSV (Tarieven 2026) ---
 @st.cache_data
 def load_mrb_data():
     try:
@@ -63,7 +73,7 @@ st.title("Autoberekening zakelijk of privé?")
 st.write(f"***In het hart van de gezondheidszorg.***")
 st.markdown("---")
 
-# --- 3. RDW API FUNCTIE ---
+# --- 4. RDW API FUNCTIE ---
 @st.cache_data
 def get_rdw_data(kenteken):
     kenteken = kenteken.replace("-", "").upper()
@@ -87,7 +97,7 @@ def get_rdw_data(kenteken):
         }
     except: return None
 
-# --- 4. MRB REKENMETHODE (2026) ---
+# --- 5. MRB REKENMETHODE (2026) ---
 def bereken_mrb_csv(gewicht, brandstoffen, provincie_naam):
     if df_mrb is None or df_prov is None: return 0
     trede = df_mrb[df_mrb['min_massa'] <= gewicht].iloc[-1]
@@ -124,7 +134,7 @@ def bepaal_bijtelling_index(peil_jaar, is_ev, is_youngtimer):
     elif peil_jaar in [2023, 2024]: return 6
     else: return 7
 
-# --- 5. INTERFACE ---
+# --- 6. INTERFACE ---
 st.subheader("1. Klant & Voertuig Gegevens")
 colA, colB = st.columns(2)
 with colA: klant_naam = st.text_input("Naam relatie *")
@@ -176,22 +186,28 @@ if kenteken_input:
             aanschaf = st.number_input("Aanschafwaarde / Dagwaarde (€)", value=int(auto['catalogusprijs']))
             
             is_young_manual = st.checkbox("Youngtimer regeling toepassen?", value=is_young_auto)
+            is_minder_dan_500 = st.checkbox("Minder dan 500 km privé per jaar (geen bijtelling)?", value=False)
             
-            # Youngtimer waarschuwingen
-            if is_young_manual and not is_young_auto:
-                st.warning(f"⚠️ **Pas op:** Voertuig is pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
-            elif is_young_auto and not is_young_manual:
-                st.info(f"💡 **Tip:** De youngtimer-regeling (35% over dagwaarde) is waarschijnlijk voordeliger.")
-                
-            # 60-maandenregel EV waarschuwing
-            if is_vervallen_ev and not is_young_manual:
-                st.info(f"⚡ **Let op: 60-maandenregel EV.** De initiële termijn is in {eind_60mnd_dt.year} vervallen. De bijtelling is automatisch geüpdatet naar de regels van {peil_jaar}.")
+            if is_minder_dan_500:
+                st.info("ℹ️ **Geen bijtelling:** Let op, om 0% bijtelling te verantwoorden is een sluitende rittenadministratie (of 'Verklaring geen privégebruik auto') vereist.")
+            else:
+                # Youngtimer waarschuwingen (alleen tonen als <500km niet is aangevinkt)
+                if is_young_manual and not is_young_auto:
+                    st.warning(f"⚠️ **Pas op:** Voertuig is pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
+                elif is_young_auto and not is_young_manual:
+                    st.info(f"💡 **Tip:** De youngtimer-regeling (35% over dagwaarde) is waarschijnlijk voordeliger.")
+                    
+                # 60-maandenregel EV waarschuwing
+                if is_vervallen_ev and not is_young_manual:
+                    st.info(f"⚡ **Let op: 60-maandenregel EV.** De initiële termijn is in {eind_60mnd_dt.year} vervallen. De bijtelling is automatisch geüpdatet naar de regels van {peil_jaar}.")
             
             idx_bijt = bepaal_bijtelling_index(peil_jaar, is_ev, is_young_manual)
             gekozen_bijt = st.selectbox("Bijtellingsprofiel", BIJTELLING_OPTIES, index=idx_bijt)
             
             # Automatische bijtelling berekening
-            if is_young_manual:
+            if is_minder_dan_500:
+                calc_bijt = 0.0
+            elif is_young_manual:
                 calc_bijt = aanschaf * 0.35
             else:
                 bijt_perc = float(gekozen_bijt.split("%")[0]) / 100
@@ -204,7 +220,7 @@ if kenteken_input:
             bijt_bruto = st.number_input("Bijtelling (€/jaar) - handmatig aanpasbaar", value=float(calc_bijt))
             
             z_km = st.number_input("Zakelijke km / jaar", value=25000)
-            p_km = st.number_input("Privé km / jaar", value=5000)
+            p_km = st.number_input("Privé km / jaar", value=5000 if not is_minder_dan_500 else 0)
             totaal_km = z_km + p_km
             
         with col2:
@@ -228,8 +244,8 @@ if kenteken_input:
         afschr = (aanschaf * 0.8) * 0.2
         tot_k = brandstof_kosten + mrb + onderhoud + verzekering + overige + afschr + lease
         
-        # Maximeringsregel
-        is_gemaximeerd = bijt_bruto > tot_k
+        # Maximeringsregel (alleen relevant als er bijtelling is)
+        is_gemaximeerd = bijt_bruto > tot_k and not is_minder_dan_500
         bijt_definitief = min(bijt_bruto, tot_k)
 
         zak_aftrek = tot_k - bijt_definitief
@@ -248,7 +264,9 @@ if kenteken_input:
         with res1:
             st.markdown("#### 🏢 Auto Zakelijk")
             st.write(f"Totale kosten p/j: **€ {fmt(tot_k)}**")
-            if is_gemaximeerd:
+            if is_minder_dan_500:
+                st.write(f"Bijtelling (< 500km privé): **- € 0**")
+            elif is_gemaximeerd:
                 st.write(f"Bijtelling (afgetopt): **- € {fmt(bijt_definitief)}**")
             else:
                 st.write(f"Bijtelling: **- € {fmt(bijt_definitief)}**")
@@ -278,7 +296,6 @@ if kenteken_input:
                     logo = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
                     if os.path.exists(logo): self.image(logo, 10, 20, 35)
                     self.set_xy(10, 32); 
-                    # Vaste fix: we gebruiken style='' in plaats van 'I' (Italic) om de font-fout te voorkomen!
                     self.set_font(self.font_fam, '', 10); 
                     self.cell(0, 10, "In het hart van de gezondheidszorg.", ln=True)
                     
@@ -294,22 +311,28 @@ if kenteken_input:
             pdf.cell(0, 10, clean(f"Autoberekening: Zakelijk of Privé?"), ln=True)
             pdf.line(10, pdf.get_y(), 200, pdf.get_y()); pdf.ln(4)
 
+            # Sectie 1: Relatiegegevens
             pdf.set_font(f, 'B', 11); pdf.set_text_color(232, 78, 15); pdf.cell(200, 6, "1. Relatiegegevens", ln=True)
             pdf.set_font(f, '', 10); pdf.set_text_color(0)
             pdf.cell(35, 5, "Naam relatie:"); pdf.cell(70, 5, clean(klant_naam)); pdf.cell(35, 5, "Datum:"); pdf.cell(50, 5, datetime.datetime.now().strftime("%d-%m-%Y"), ln=True)
             pdf.cell(35, 5, "Lidnummer:"); pdf.cell(70, 5, clean(klant_nummer), ln=True); pdf.ln(3)
 
+            # Sectie 2: Voertuigspecificaties
             pdf.set_font(f, 'B', 11); pdf.set_text_color(232, 78, 15); pdf.cell(200, 6, "2. Voertuigspecificaties", ln=True)
             pdf.set_font(f, '', 10); pdf.set_text_color(0); pdf.set_fill_color(245)
             pdf.cell(35, 6, " Merk & Type:", fill=True); pdf.cell(155, 6, clean(f"{auto['merk']} {auto['handelsbenaming']} ({kenteken_input.upper()})"), fill=True, ln=True)
             pdf.cell(35, 6, " Brandstof:", fill=True); pdf.cell(155, 6, brandstof_t, fill=True, ln=True)
             pdf.cell(35, 6, " Eerste toelating:", fill=True); pdf.cell(155, 6, f"{auto['toelating']} ({leeftijd.years} jaar, {leeftijd.months} mnd)", fill=True, ln=True)
-            pdf.cell(35, 6, " Youngtimer:", fill=True); pdf.cell(155, 6, "Ja" if is_young_manual else "Nee", fill=True, ln=True); pdf.ln(2)
+            
+            # Toevoeging Youngtimer & <500km status in PDF
+            pdf.cell(35, 6, " Youngtimer:", fill=True); pdf.cell(155, 6, "Ja" if is_young_manual else "Nee", fill=True, ln=True)
+            pdf.cell(35, 6, " < 500 km prive:", fill=True); pdf.cell(155, 6, "Ja (Geen bijtelling)" if is_minder_dan_500 else "Nee", fill=True, ln=True); pdf.ln(2)
             
             pdf.cell(45, 5, "Cataloguswaarde:"); pdf.cell(45, 5, f"EUR {fmt(auto['catalogusprijs'])}", align='R')
             pdf.cell(10, 5); pdf.cell(45, 5, "Aanschafwaarde:"); pdf.cell(45, 5, f"EUR {fmt(aanschaf)}", align='R', ln=True)
             pdf.cell(45, 5, "Bijtellingsprofiel:"); pdf.set_font(f, '', 9); pdf.cell(145, 5, clean(gekozen_bijt), ln=True); pdf.ln(3)
 
+            # Sectie 3: Financiële vergelijking
             pdf.set_font(f, 'B', 11); pdf.set_text_color(232, 78, 15)
             pdf.cell(90, 7, "Auto zakelijk", border='B'); pdf.cell(10, 7); pdf.cell(90, 7, "Auto prive", border='B', ln=True)
             pdf.set_font(f, '', 10); pdf.set_text_color(0); pdf.ln(2)
@@ -330,24 +353,27 @@ if kenteken_input:
             pdf.ln(2); pdf.set_font(f, 'B', 10)
             pdf.cell(45, 6, "Totale kosten:"); pdf.cell(45, 6, f"EUR {fmt(tot_k)}", align='R', ln=True)
             
-            lbl_bijt = "Bijtelling (gelijk aan autokosten):" if is_gemaximeerd else "Bijtelling:"
+            lbl_bijt = "Bijtelling (gemaximeerd):" if is_gemaximeerd else ("Bijtelling (< 500km):" if is_minder_dan_500 else "Bijtelling:")
             pdf.cell(45, 6, lbl_bijt); pdf.cell(45, 6, f"- EUR {fmt(bijt_definitief)}", align='R', ln=True); pdf.ln(2)
             
             pdf.set_fill_color(245)
             pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(zak_aftrek)} ", fill=True, align='R')
             pdf.cell(10, 8); pdf.cell(45, 8, " Fiscale aftrek:", fill=True); pdf.cell(45, 8, f"EUR {fmt(pri_aftrek)} ", fill=True, align='R', ln=True); pdf.ln(5)
             
-            pdf.set_fill_color(232, 78, 15); pdf.set_text_color(255); pdf.set_font(f, 'B', 11)
+            # Sectie 4: Advies & Aandachtspunten
+            pdf.set_fill_color(232, 78, 15); pdf.set_text_color(255, 255, 255); pdf.set_font(f, 'B', 11)
             pdf.cell(190, 10, clean(f"  Advies vanuit fiscaal oogpunt: {advies}"), fill=True, ln=True); pdf.ln(4)
             
             pdf.set_text_color(0, 49, 92); pdf.set_font(f, 'B', 10); pdf.cell(0, 5, "Aandachtspunten bij zakelijk rijden:", ln=True)
-            pdf.set_font(f, '', 8); pdf.set_text_color(0)
+            pdf.set_font(f, '', 8); pdf.set_text_color(0, 0, 0)
             
             punten = [
                 "- Kosten zijn schattingen gebaseerd op Belastingdienst tarieven 2026.", 
                 "- Na 5 jaar vervallen de afschrijvingskosten.", 
                 "- Bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming."
             ]
+            if is_minder_dan_500:
+                punten.insert(0, "- LET OP: Voor 0% bijtelling is een sluitende rittenadministratie of verklaring vereist.")
             if is_vervallen_ev:
                 punten.insert(0, f"- LET OP: De 60-maandenregel voor deze EV is verlopen. Tarief van {peil_jaar} is toegepast.")
             if is_gemaximeerd:
