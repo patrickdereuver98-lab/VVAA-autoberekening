@@ -70,24 +70,23 @@ def get_rdw_data(kenteken):
         if not req_basis: return None
         
         data = req_basis[0]
-        brandstoffen = []
+        brandstoffen = [b.get("brandstof_omschrijving", "").lower() for b in req_brandstof] if req_brandstof else []
         rdw_verbruik_liter = 6.0 
         
         if req_brandstof:
             for b in req_brandstof:
                 omschrijving = b.get("brandstof_omschrijving", "").lower()
-                brandstoffen.append(omschrijving)
                 if omschrijving in ["benzine", "diesel", "lpg"]:
                     verbruik = b.get("brandstofverbruik_gecombineerd")
                     if verbruik: rdw_verbruik_liter = float(verbruik)
         
-        eerste_toelating = data.get("datum_eerste_toelating_dt", datetime.datetime.now().strftime("%Y-%m-%d"))
+        eerste_toelating = data.get("datum_eerste_toelating_dt", "2020-01-01")[:10]
         return {
             "merk": data.get("merk", "Onbekend"),
             "handelsbenaming": data.get("handelsbenaming", "Onbekend"),
             "catalogusprijs": float(data.get("catalogusprijs", 0)),
             "gewicht": int(data.get("massa_ledig_voertuig", 0)),
-            "toelating": eerste_toelating[:10],
+            "toelating": eerste_toelating,
             "bouwjaar": int(eerste_toelating[:4]),
             "brandstoffen": brandstoffen,
             "rdw_verbruik_liter": rdw_verbruik_liter
@@ -95,46 +94,42 @@ def get_rdw_data(kenteken):
     except:
         return None
 
-# --- NIEUWE, ACCURATERE MRB FUNCTIE ---
-def schat_mrb(gewicht, brandstof_is_ev, brandstof_is_diesel, provincie):
-    # Exacte schalen Belastingdienst (gemiddelde basistarieven 2024/2025 per jaar)
-    if gewicht <= 550: basis = 160
-    elif gewicht <= 650: basis = 184
-    elif gewicht <= 750: basis = 216
-    elif gewicht <= 850: basis = 284
-    elif gewicht <= 950: basis = 400
-    elif gewicht <= 1050: basis = 476
-    elif gewicht <= 1150: basis = 568
-    elif gewicht <= 1250: basis = 656
-    elif gewicht <= 1350: basis = 744
-    elif gewicht <= 1450: basis = 836
-    elif gewicht <= 1550: basis = 924
-    elif gewicht <= 1650: basis = 1012
-    elif gewicht <= 1750: basis = 1104
-    elif gewicht <= 1850: basis = 1192
-    elif gewicht <= 1950: basis = 1284
-    elif gewicht <= 2050: basis = 1372
-    elif gewicht <= 2150: basis = 1464
-    elif gewicht <= 2250: basis = 1552
-    elif gewicht <= 2350: basis = 1644
-    elif gewicht <= 2450: basis = 1732
-    elif gewicht <= 2550: basis = 1820
-    else: basis = 2000
-    
-    # Brandstof correcties (2025 normen)
-    if brandstof_is_ev: 
-        basis = basis * 0.25 # 75% korting voor EV in 2025
-    elif brandstof_is_diesel: 
-        basis = basis * 2.15 # Dieseltoeslag inclusief fijnstof
-        
-    # Provinciale nuances
-    provincie_factoren = {
-        "Noord-Holland": 0.95, "Zuid-Holland": 1.05, "Gelderland": 1.02, 
-        "Drenthe": 1.03, "Groningen": 1.02, "Friesland": 1.01, 
-        "Overijssel": 1.01, "Flevoland": 1.00, "Utrecht": 0.98, 
-        "Zeeland": 1.02, "Noord-Brabant": 1.01, "Limburg": 1.03
+# --- VERBETERDE MRB ENGINE (GEBASEERD OP OFFICIELE SCHIJVEN) ---
+def bereken_mrb(gewicht, brandstoffen, provincie):
+    if gewicht <= 550: kw = 32
+    elif gewicht <= 650: kw = 41
+    elif gewicht <= 750: kw = 53
+    elif gewicht <= 850: kw = 70
+    elif gewicht <= 950: kw = 94
+    elif gewicht <= 1050: kw = 114
+    elif gewicht <= 1150: kw = 135
+    elif gewicht <= 1250: kw = 156
+    elif gewicht <= 1350: kw = 177
+    elif gewicht <= 1450: kw = 199
+    elif gewicht <= 1550: kw = 221
+    elif gewicht <= 1650: kw = 242
+    elif gewicht <= 1750: kw = 264
+    elif gewicht <= 1850: kw = 286
+    elif gewicht <= 1950: kw = 308
+    elif gewicht <= 2050: kw = 330
+    elif gewicht <= 2150: kw = 352
+    elif gewicht <= 2250: kw = 374
+    else: kw = 400
+
+    # Provinciale opcenten 2025/2026 factor
+    opcenten = {
+        "Groningen": 1.02, "Friesland": 1.01, "Drenthe": 1.03, "Overijssel": 1.01,
+        "Flevoland": 1.00, "Gelderland": 1.02, "Utrecht": 0.98, "Noord-Holland": 0.95,
+        "Zuid-Holland": 1.05, "Zeeland": 1.02, "Noord-Brabant": 1.01, "Limburg": 1.03
     }
-    return basis * provincie_factoren.get(provincie, 1.00)
+    basis_jaar = (kw * 4) * opcenten.get(provincie, 1.0)
+    
+    is_ev = any("elektriciteit" in b for b in brandstoffen)
+    is_diesel = any("diesel" in b for b in brandstoffen)
+    
+    if is_ev: return basis_jaar * 0.25 # Korting 2025
+    if is_diesel: return basis_jaar * 2.15 # Dieseltoeslag
+    return basis_jaar
 
 BIJTELLING_OPTIES = [
     "22% over Cataloguswaarde (Standaard)", "35% over Aanschafwaarde (Youngtimer >15 jaar)",
@@ -155,7 +150,6 @@ def bepaal_bijtelling_index(bouwjaar, is_ev, is_youngtimer):
 
 # --- 3. KLANTGEGEVENS & VALIDATIE ---
 st.subheader("1. Klant & Voertuig Gegevens")
-
 colA, colB = st.columns(2)
 with colA: klant_naam = st.text_input("Naam relatie *")
 with colB: klant_nummer = st.text_input("Relatienummer (alleen cijfers) *")
@@ -190,7 +184,7 @@ if kenteken_input:
         if not is_ev and not is_brandstof: is_brandstof = True
         
         brandstof_tekst = ", ".join(auto['brandstoffen']).title()
-        berekende_mrb = schat_mrb(auto['gewicht'], is_ev, is_diesel, provincie)
+        berekende_mrb = bereken_mrb(auto['gewicht'], auto['brandstoffen'], provincie)
         voorspelde_bijtelling_index = bepaal_bijtelling_index(auto['bouwjaar'], is_ev, is_youngtimer_auto)
         
         st.success(f"**Voertuig:** {auto['merk']} {auto['handelsbenaming']} | **Brandstof:** {brandstof_tekst} | **RDW Verbruik:** {auto['rdw_verbruik_liter']} L/100km")
@@ -199,17 +193,17 @@ if kenteken_input:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.markdown(f"**Waarde & Bijtelling**")
+            st.markdown("**Waarde & Bijtelling**")
             st.write(f"Cataloguswaarde (RDW): **€ {fmt(auto['catalogusprijs'])}**")
             aanschafwaarde = st.number_input("Aanschafwaarde (€)", min_value=0, step=500, value=int(auto['catalogusprijs']))
             gekozen_bijtelling = st.selectbox("Fiscaal Bijtellingsprofiel:", BIJTELLING_OPTIES, index=voorspelde_bijtelling_index)
-            st.markdown(f"**Kilometers per jaar**")
+            st.markdown("**Kilometers per jaar**")
             zakelijke_km = st.number_input("Zakelijke km", min_value=0, value=25000, step=1000)
             prive_km = st.number_input("Privé km", min_value=0, value=25000, step=1000)
             totaal_km = zakelijke_km + prive_km
 
         with col2:
-            st.markdown(f"**Verbruik & Kosten**")
+            st.markdown("**Verbruik & Kosten**")
             brandstofkosten = 0.0
             laadkosten = 0.0
             if is_brandstof:
@@ -222,7 +216,7 @@ if kenteken_input:
                 laadkosten = st.number_input("Laadkosten (€)", value=int((totaal_km / 100) * verbruik_kwh * prijs_kwh))
 
         with col3:
-            st.markdown(f"**Vaste & Variabele Kosten**")
+            st.markdown("**Vaste & Variabele Kosten**")
             mrb = st.number_input("Motorrijtuigenbelasting (€)", value=int(berekende_mrb))
             onderhoud = st.number_input("Onderhoud & Reparatie (€)", value=600)
             verzekering = st.number_input("Verzekering (€)", value=800)
@@ -232,17 +226,16 @@ if kenteken_input:
             with st.expander("ℹ️ Hoe schatten we deze kosten?"):
                 st.markdown("""
                 **VASTE KOSTEN**
-                * **Afschrijving:** 20% afschrijving minus restwaarde.
-                * **Wegenbelasting:** Afhankelijk van provincie, brandstof en gewicht.
-                * **Verzekering:** Afhankelijk van risico, gewicht, dagwaarde en schadevrije jaren.
+                * **Afschrijving:** 20% van aanschafwaarde minus restwaarde.
+                * **Wegenbelasting:** Gebaseerd op officiële schijven Belastingdienst.
+                * **Verzekering:** Gemiddelde premie op basis van voertuigtype en dagwaarde.
 
                 **VARIABELE KOSTEN (Onderhoud)**
                 * **Distributieriem:** € 300 - € 1.000 (elke 60k-120k km).
                 * **Koppelingsplaten:** Slijtage door veel korte ritten/files.
                 * **Uitlaat:** Na 10 jaar kans op roest/lekken.
-                * **Remschijven en -blokken:** € 300 - € 600 (vaak na 75.000 km).
-                * **Airconditioning:** Gemiddeld € 150 voor jaarlijkse controle.
-                * **Banden:** Controleren na 5 jaar, vervangen bij 10 jaar.
+                * **Remschijven/-blokken:** Gemiddeld € 300 - € 600.
+                * **Airco & Banden:** Jaarlijkse controle en vervanging op basis van leeftijd.
                 """)
 
         voldoet_aan_10_procent = (totaal_km == 0) or ((zakelijke_km / totaal_km) >= 0.10)
@@ -271,7 +264,6 @@ if kenteken_input:
         st.markdown("---")
         st.subheader("3. Resultaat")
         res1, res2 = st.columns(2)
-        
         with res1:
             st.markdown("#### Auto zakelijk")
             if is_ev: st.write(f"Laadkosten: € {fmt(laadkosten)}")
@@ -298,7 +290,7 @@ if kenteken_input:
 
         # --- PDF GENERATIE ---
         if gevalideerd:
-            st.markdown("<br><br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
             def clean_text(text): return str(text).replace('€', 'EUR').encode('latin-1', 'replace').decode('latin-1')
             
             def row_pdf(pdf, label1, val1, label2="", val2=""):
@@ -317,130 +309,88 @@ if kenteken_input:
                     if os.path.exists("vvaa_logo.jpg"):
                         self.image("vvaa_logo.jpg", x=10, y=20, w=35)
                     else:
-                        self.set_font("Arial", 'B', 24)
-                        self.set_text_color(232, 78, 15)
-                        self.set_xy(10, 20)
-                        self.cell(0, 10, "VvAA", ln=True)
-                    self.set_font("Arial", 'I', 11)
-                    self.set_text_color(100, 100, 100)
-                    self.set_xy(10, 32)
-                    self.cell(0, 10, "In het hart van de gezondheidszorg.", ln=True)
+                        self.set_font("Arial", 'B', 24); self.set_text_color(232, 78, 15)
+                        self.set_xy(10, 20); self.cell(0, 10, "VvAA", ln=True)
+                    self.set_font("Arial", 'I', 11); self.set_text_color(100, 100, 100)
+                    self.set_xy(10, 32); self.cell(0, 10, "In het hart van de gezondheidszorg.", ln=True)
                     self.ln(6) 
 
                 def footer(self):
                     self.set_y(-15)
-                    self.set_fill_color(0, 49, 92)
-                    self.rect(0, 282, 210, 15, 'F')
-                    self.set_text_color(255, 255, 255)
-                    self.set_font("Arial", '', 9)
+                    self.set_fill_color(0, 49, 92); self.rect(0, 282, 210, 15, 'F')
+                    self.set_text_color(255, 255, 255); self.set_font("Arial", '', 9)
                     self.cell(0, 15, "VvAA | www.vvaa.nl | Voor zorgverleners, door zorgverleners", align='C', ln=True)
 
             pdf = VVAAPDF()
             pdf.set_auto_page_break(auto=False) 
             pdf.add_page()
             
-            oranje = (232, 78, 15)
-            blauw = (0, 49, 92)
-            zwart = (0, 0, 0)
-            licht_grijs = (245, 245, 245)
+            oranje = (232, 78, 15); blauw = (0, 49, 92); zwart = (0, 0, 0); licht_grijs = (245, 245, 245)
             
-            pdf.set_font("Arial", 'B', 16)
-            pdf.set_text_color(*blauw)
+            pdf.set_font("Arial", 'B', 16); pdf.set_text_color(*blauw)
             pdf.cell(200, 8, txt="Autoberekening: Zakelijk of Privé?", ln=True)
-            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-            pdf.ln(3)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y()); pdf.ln(3)
             
-            pdf.set_font("Arial", 'B', 11)
-            pdf.set_text_color(*oranje)
+            # Sectie 1: Relatie
+            pdf.set_font("Arial", 'B', 11); pdf.set_text_color(*oranje)
             pdf.cell(200, 6, txt="1. Relatiegegevens", ln=True)
+            pdf.set_text_color(*zwart); pdf.set_font("Arial", '', 10)
+            pdf.cell(35, 5, txt="Naam relatie:", ln=False); pdf.cell(70, 5, txt=clean_text(klant_naam), ln=False)
+            pdf.cell(35, 5, txt="Datum:", ln=False); pdf.cell(50, 5, txt=datetime.datetime.now().strftime("%d-%m-%Y"), ln=True)
+            pdf.cell(35, 5, txt="Relatienummer:", ln=False); pdf.cell(70, 5, txt=clean_text(klant_nummer), ln=True); pdf.ln(2)
             
-            pdf.set_text_color(*zwart)
-            pdf.set_font("Arial", '', 10)
-            pdf.cell(35, 5, txt="Naam relatie:", ln=False)
-            pdf.cell(70, 5, txt=clean_text(klant_naam), ln=False)
-            pdf.cell(35, 5, txt="Datum:", ln=False)
-            pdf.cell(50, 5, txt=datetime.datetime.now().strftime("%d-%m-%Y"), ln=True)
-            pdf.cell(35, 5, txt="Relatienummer:", ln=False)
-            pdf.cell(70, 5, txt=clean_text(klant_nummer), ln=True)
-            pdf.ln(3)
-            
-            pdf.set_font("Arial", 'B', 11)
-            pdf.set_text_color(*oranje)
+            # Sectie 2: Voertuig
+            pdf.set_font("Arial", 'B', 11); pdf.set_text_color(*oranje)
             pdf.cell(200, 6, txt="2. Voertuigspecificaties", ln=True)
-            
-            pdf.set_text_color(*zwart)
-            pdf.set_font("Arial", '', 10)
-            pdf.set_fill_color(*licht_grijs)
+            pdf.set_text_color(*zwart); pdf.set_font("Arial", '', 10); pdf.set_fill_color(*licht_grijs)
             pdf.cell(35, 6, txt=" Merk & Type:", ln=False, fill=True)
             pdf.cell(155, 6, txt=clean_text(f"{auto['merk']} {auto['handelsbenaming']} ({kenteken_input.upper()})"), ln=True, fill=True)
             pdf.cell(35, 6, txt=" Eerste toelating:", ln=False, fill=True)
             pdf.cell(155, 6, txt=f"{auto['toelating']} ({leeftijd_exact.years} jaar, {leeftijd_exact.months} mnd)", ln=True, fill=True)
             pdf.cell(35, 6, txt=" Verbruik:", ln=False, fill=True)
-            pdf.cell(155, 6, txt=f"{auto['rdw_verbruik_liter']} L/100km (RDW)", ln=True, fill=True)
-            pdf.ln(2)
+            pdf.cell(155, 6, txt=f"{auto['rdw_verbruik_liter']} L/100km (RDW)", ln=True, fill=True); pdf.ln(2)
             
             row_pdf(pdf, "Cataloguswaarde:", f"EUR {fmt(auto['catalogusprijs'])}", "Aanschafwaarde:", f"EUR {fmt(aanschafwaarde)}")
-            pdf.cell(45, 5, txt="Bijtellingsprofiel:", ln=False)
-            pdf.set_font("Arial", 'I', 9)
-            pdf.cell(145, 5, txt=clean_text(gekozen_bijtelling), ln=True)
-            pdf.ln(4)
+            pdf.cell(45, 5, txt="Bijtellingsprofiel:", ln=False); pdf.set_font("Arial", 'I', 9)
+            pdf.cell(145, 5, txt=clean_text(gekozen_bijtelling), ln=True); pdf.ln(3)
             
-            pdf.set_font("Arial", 'B', 11)
-            pdf.set_text_color(*oranje)
-            pdf.cell(90, 6, txt="Auto zakelijk", ln=False, border='B')
-            pdf.cell(10, 6, txt="", ln=False)
-            pdf.cell(90, 6, txt="Auto privé", ln=True, border='B')
-            pdf.ln(2)
+            # Sectie 3: Tabel
+            pdf.set_font("Arial", 'B', 11); pdf.set_text_color(*oranje)
+            pdf.cell(90, 6, txt="Auto zakelijk", ln=False, border='B'); pdf.cell(10, 6, txt="", ln=False)
+            pdf.cell(90, 6, txt="Auto prive", ln=True, border='B'); pdf.ln(2); pdf.set_text_color(*zwart)
             
-            pdf.set_text_color(*zwart)
             if is_ev: row_pdf(pdf, "Laadkosten:", f"EUR {fmt(laadkosten)}", f"Totale kosten ({fmt(totaal_km)}km):", f"EUR {fmt(totale_kosten)}")
             if is_brandstof: 
                 lbl2 = f"Totale kosten ({fmt(totaal_km)}km):" if not is_ev else "Vergoeding:"
-                val2 = f"EUR {fmt(totale_kosten)}" if not is_ev else "EUR 0,23 / km"
+                val2 = f"EUR {fmt(totale_kosten)}" if not is_ev else f"EUR {fmt(pri_aftrek)}"
                 row_pdf(pdf, "Brandstofkosten:", f"EUR {fmt(brandstofkosten)}", lbl2, val2)
             
-            row_pdf(pdf, "Wegenbelasting:", f"EUR {fmt(mrb)}", "Vergoeding:" if not (is_ev and is_brandstof) else "Zakelijke km:", "EUR 0,23 / km" if not (is_ev and is_brandstof) else str(zakelijke_km))
-            row_pdf(pdf, "Onderhoud:", f"EUR {fmt(onderhoud)}", "Zakelijke km:" if not (is_ev and is_brandstof) else "", str(zakelijke_km) if not (is_ev and is_brandstof) else "")
-            row_pdf(pdf, "Verzekering:", f"EUR {fmt(verzekering)}")
+            row_pdf(pdf, "Wegenbelasting:", f"EUR {fmt(mrb)}", "Zakelijke km:", str(zakelijke_km))
+            row_pdf(pdf, "Onderhoud:", f"EUR {fmt(onderhoud)}", "Vergoeding p/km:", "EUR 0,23")
+            row_pdf(pdf, "Verzekering:", f"EUR {fmt(verz)}")
             row_pdf(pdf, "Overige autokosten:", f"EUR {fmt(overige)}")
-            row_pdf(pdf, "Afschrijving:", f"EUR {fmt(afschrijving)}")
-            row_pdf(pdf, "Leasebedrag all-in:", f"EUR {fmt(leasebedrag)}")
+            row_pdf(pdf, "Afschrijving:", f"EUR {fmt(afschr)}")
+            row_pdf(pdf, "Leasebedrag/Rente:", f"EUR {fmt(lease)}")
             
-            pdf.ln(1)
-            pdf.set_font("Arial", 'B', 10)
-            row_pdf(pdf, "Totale autokosten:", f"EUR {fmt(totale_kosten)}")
-            pdf.set_font("Arial", '', 10)
-            row_pdf(pdf, "Bijtelling:", f"EUR {fmt(bijtelling_bedrag)}")
+            pdf.ln(1); pdf.set_font("Arial", 'B', 10); row_pdf(pdf, "Totale autokosten:", f"EUR {fmt(tot_k)}")
+            pdf.set_font("Arial", '', 10); row_pdf(pdf, "Bijtelling:", f"EUR {fmt(bijt_bedrag)}"); pdf.ln(2)
             
-            pdf.ln(2)
-            pdf.set_fill_color(*licht_grijs)
-            pdf.set_font("Arial", 'B', 10)
+            pdf.set_fill_color(*licht_grijs); pdf.set_font("Arial", 'B', 10)
             pdf.cell(45, 7, txt=" Fiscale aftrekpost:", ln=False, fill=True)
-            pdf.cell(45, 7, txt=f"EUR {fmt(aftrek_zakelijk)} ", ln=False, align='R', fill=True)
+            pdf.cell(45, 7, txt=f"EUR {fmt(zak_aftrek)} ", ln=False, align='R', fill=True)
             pdf.cell(10, 7, txt="", ln=False)
             pdf.cell(45, 7, txt=" Fiscale aftrekpost:", ln=False, fill=True)
-            pdf.cell(45, 7, txt=f"EUR {fmt(aftrek_prive)} ", ln=True, align='R', fill=True)
-            pdf.ln(5)
+            pdf.cell(45, 7, txt=f"EUR {fmt(pri_aftrek)} ", ln=True, align='R', fill=True); pdf.ln(4)
             
-            pdf.set_fill_color(*oranje)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font("Arial", 'B', 11)
-            pdf.cell(190, 8, txt=clean_text(f"  Advies vanuit fiscaal oogpunt: {advies}"), ln=True, fill=True)
-            pdf.ln(4)
+            pdf.set_fill_color(*oranje); pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 11)
+            pdf.cell(190, 8, txt=clean_text(f"  Advies vanuit fiscaal oogpunt: {advies}"), ln=True, fill=True); pdf.ln(4)
             
-            pdf.set_text_color(*blauw)
-            pdf.set_font("Arial", 'B', 10)
-            pdf.cell(200, 5, txt="Aandachtspunten bij zakelijk rijden:", ln=True)
-            
-            pdf.set_text_color(*zwart)
-            pdf.set_font("Arial", '', 9)
+            pdf.set_text_color(*blauw); pdf.set_font("Arial", 'B', 10); pdf.cell(200, 5, txt="Aandachtspunten bij zakelijk rijden:", ln=True)
+            pdf.set_text_color(*zwart); pdf.set_font("Arial", '', 8)
             if not voldoet_aan_10_procent:
-                pdf.set_text_color(220, 53, 69)
-                pdf.cell(200, 4, txt="- LET OP: Auto wordt voor minder dan 10% zakelijk gebruikt (fiscale kwalificatie risico).", ln=True)
-                pdf.set_text_color(*zwart)
-                
-            pdf.cell(200, 4, txt="- Verschillende kostenposten zijn gebaseerd op een schatting.", ln=True)
-            pdf.cell(200, 4, txt="- Houd rekening met het vervallen van de rente op de lening.", ln=True)
-            pdf.cell(200, 4, txt="- Na 5 jaar vervallen de afschrijvingskosten.", ln=True)
-            pdf.cell(200, 4, txt="- Bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming.", ln=True)
-            pdf.cell(200, 4, txt="- Percentage bijtelling geldt voor 60 maanden vanaf datum eerste to
+                pdf.set_text_color(220, 53, 69); pdf.cell(200, 4, txt="- LET OP: Zakelijk gebruik < 10% (risico fiscale kwalificatie).", ln=True); pdf.set_text_color(*zwart)
+            pdf.cell(200, 4, txt="- Kosten zijn schattingen. Afschrijving 20% minus restwaarde.", ln=True)
+            pdf.cell(200, 4, txt="- Percentage bijtelling geldt voor 60 maanden vanaf datum eerste toelating.", ln=True)
+            pdf.cell(200, 4, txt="- Bij inruil kan belastbare boekwinst ontstaan.", ln=True)
+            
+            st.download_button(label="📄 Download Rapport", data=pdf.output(dest='S').encode('latin-1'), file_name=f"VvAA_Autoberekening_{kenteken_input}.pdf")
