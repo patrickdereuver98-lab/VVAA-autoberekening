@@ -17,7 +17,7 @@ st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="w
 
 vvaa_css = f"""
 <style>
-    /* Algemene scaling: alles iets kleiner voor beter overzicht */
+    /* Algemene scaling: alles iets kleiner */
     html, body, [class*="st-"] {{
         font-size: 0.9rem !important;
     }}
@@ -34,12 +34,10 @@ vvaa_css = f"""
     .stButton>button:hover {{ background-color: #c7400a !important; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }}
     .stButton>button p, .stButton>button span {{ color: white !important; }}
     
-    /* ZICHTBAARHEID DOWNLOADKNOP */
     div.stDownloadButton > button {{ 
         background-color: {VVAA_BLAUW} !important; color: white !important; border-radius: 8px !important;
         padding: 15px 32px !important; font-size: 18px !important; font-weight: bold !important; width: 100% !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 2px solid {VVAA_BLAUW} !important; transition: 0.3s;
-        display: block !important;
     }}
     div.stDownloadButton > button:hover {{ background-color: #001f3f !important; box-shadow: 0 6px 12px rgba(0,0,0,0.2); }}
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
@@ -51,12 +49,38 @@ vvaa_css = f"""
     .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
     div[data-testid="stExpander"] details div {{ color: {VVAA_BLAUW} !important; }}
     
-    /* DROPDOWN FIX: Altijd wit met blauwe tekst */
-    input, select, div[data-baseweb="select"] > div {{ background-color: white !important; color: {VVAA_BLAUW} !important; border-radius: 6px !important; border: 1px solid #ddd !important; }}
-    div[data-baseweb="select"] div[class*="singleValue"] {{ color: {VVAA_BLAUW} !important; }}
-    div[data-baseweb="popover"] > div, ul[role="listbox"] {{ background-color: white !important; }}
-    ul[role="listbox"] li {{ color: {VVAA_BLAUW} !important; background-color: white !important; }}
-    ul[role="listbox"] li:hover {{ background-color: #f0f2f6 !important; }}
+    /* --- DROPDOWN & SELECTBOX FIX: Altijd wit met blauwe tekst --- */
+    input, select, div[data-baseweb="select"] > div {{ 
+        background-color: white !important; 
+        color: {VVAA_BLAUW} !important; 
+        border-radius: 6px !important; 
+        border: 1px solid #ddd !important; 
+    }}
+    
+    div[data-baseweb="select"] div[class*="singleValue"] {{ 
+        color: {VVAA_BLAUW} !important; 
+    }}
+
+    /* Forceer de uitklaplijst (popover) naar wit */
+    div[data-baseweb="popover"], div[data-baseweb="popover"] > div, ul[role="listbox"] {{ 
+        background-color: white !important; 
+    }}
+    
+    /* Forceer de opties in de lijst naar blauwe tekst op witte achtergrond */
+    div[data-baseweb="popover"] li, ul[role="listbox"] li {{ 
+        color: {VVAA_BLAUW} !important; 
+        background-color: white !important; 
+    }}
+
+    /* Forceer de tekstkleur van de span/div binnen de li */
+    div[data-baseweb="popover"] li *, ul[role="listbox"] li * {{
+        color: {VVAA_BLAUW} !important;
+    }}
+
+    ul[role="listbox"] li:hover, div[data-baseweb="popover"] li:hover {{ 
+        background-color: #f0f2f6 !important; 
+    }}
+    /* --- EINDE FIX --- */
 
     div[data-testid="metric-container"] {{
         background-color: white; border-left: 5px solid {VVAA_ORANJE}; padding: 15px 20px; border-radius: 8px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
@@ -98,7 +122,7 @@ def load_mrb_data():
 
 df_mrb, df_prov = load_mrb_data()
 
-# --- 4. HEADER LAYOUT ---
+# --- 4. MODERNE HEADER LAYOUT ---
 col_logo, col_title = st.columns([1, 4])
 with col_logo:
     logo_path = "VvAA-logo-RGB.png" if os.path.exists("VvAA-logo-RGB.png") else "vvaa_logo.jpg"
@@ -266,6 +290,7 @@ if kenteken_input:
             st.markdown("---")
             st.markdown("### 💶 Financiële Specificaties")
             
+            # --- FINANCIELE SPECIFICATIES ---
             col1, col2, col3 = st.columns(3)
             
             with col1:
@@ -337,7 +362,7 @@ if kenteken_input:
                 calc_onderhoud = round(totaal_km * 0.04) if gebruik_schatting else 0
                 
                 onderhoud = st.number_input("Onderhoud (€ / jaar)", value=float(calc_onderhoud))
-                verzekering = st.number_input("Verzekering (€ / jaar)", value=0.0)
+                verzekering = st.number_input("Verzekering (€ / jaar)", value=0.0, help="Te persoonlijk om in te schatten. Vul uw eigen premie in.")
                 overige = st.number_input("Overige kosten (€ / jaar)", value=250.0 if gebruik_schatting else 0.0)
                 
                 # Nieuwe Lease / Rente velden (afhankelijk van top vinkje)
@@ -362,6 +387,7 @@ if kenteken_input:
         pri_aftrek = round(z_km * 0.23)
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
+        # CARD 3: Resultaat
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
@@ -385,7 +411,7 @@ if kenteken_input:
                 st.markdown("#### 🏠 Auto Privé")
                 st.write(f"Vergoeding: **€ 0,23 per zakelijke km**")
                 st.write(f"Aantal zakelijke km: **{fmt(z_km)}**")
-                st.write("<br>", unsafe_allow_html=True)
+                st.write("<br>", unsafe_allow_html=True) # Witregel voor uitlijning
                 st.metric("Fiscale Aftrekpost", f"€ {fmt(pri_aftrek)}")
 
         if gevalideerd:
@@ -491,6 +517,8 @@ if kenteken_input:
             ]
             if is_minder_dan_500:
                 punten.insert(0, "- LET OP: Voor 0% bijtelling is een sluitende rittenadministratie of verklaring vereist.")
+            if peil_jaar > toel_dt.year:
+                punten.insert(0, f"- LET OP: De 60-maandenregel voor deze EV is verlopen. Tarief van {peil_jaar} is toegepast.")
             if is_gemaximeerd:
                 punten.insert(0, "- LET OP: De berekende bijtelling was hoger dan de totale kosten, en is daarom gemaximeerd.")
                 
