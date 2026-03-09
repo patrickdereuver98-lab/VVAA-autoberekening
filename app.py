@@ -73,7 +73,7 @@ st.title("Autoberekening zakelijk of privé?")
 st.write(f"***In het hart van de gezondheidszorg.***")
 st.markdown("---")
 
-# --- 4. RDW API FUNCTIE (MET HERSTELDE VERBRUIK LOGICA) ---
+# --- 4. RDW API FUNCTIE ---
 @st.cache_data
 def get_rdw_data(kenteken):
     kenteken = kenteken.replace("-", "").upper()
@@ -86,13 +86,12 @@ def get_rdw_data(kenteken):
         
         data = req_basis[0]
         brandstoffen = []
-        rdw_verbruik_liter = 6.0 
+        rdw_verbruik_liter = 0.0  
         
         if req_brandstof:
             for b in req_brandstof:
                 omschrijving = b.get("brandstof_omschrijving", "").lower()
                 brandstoffen.append(omschrijving)
-                # Zoek specifiek naar het liter-verbruik bij de brandstof motor
                 if omschrijving in ["benzine", "diesel", "lpg"]:
                     verbruik = b.get("brandstofverbruik_gecombineerd")
                     if verbruik: rdw_verbruik_liter = float(verbruik)
@@ -170,6 +169,7 @@ if kenteken_input:
     auto = get_rdw_data(kenteken_input)
     if auto:
         toel_dt = datetime.datetime.strptime(auto['toelating'], "%Y-%m-%d")
+        toelating_nl = toel_dt.strftime("%d-%m-%Y")
         vandaag = datetime.datetime.now()
         leeftijd = relativedelta(vandaag, toel_dt)
         is_young_auto = leeftijd.years >= 15
@@ -180,7 +180,6 @@ if kenteken_input:
         
         brandstof_t = ", ".join(auto['brandstoffen']).title()
         
-        # 60-maandenregel EV logica (Alleen voor VOLLEDIG elektrisch)
         if is_full_ev:
             start_mnd = toel_dt.month + 1
             start_jr = toel_dt.year
@@ -194,7 +193,8 @@ if kenteken_input:
             is_vervallen_ev = False
             peil_jaar = toel_dt.year
         
-        st.success(f"**{auto['merk']} ({kenteken_input.upper()}) - {auto['handelsbenaming']} - {brandstof_t} | {leeftijd.years} jaar en {leeftijd.months} maanden oud**")
+        # Geüpdatete weergave inclusief Datum Toelating
+        st.success(f"**{auto['merk']} ({kenteken_input.upper()}) - {auto['handelsbenaming']} - {brandstof_t} | Toelating: {toelating_nl} ({leeftijd.years} jaar en {leeftijd.months} maanden oud)**")
         
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -206,7 +206,7 @@ if kenteken_input:
             is_minder_dan_500 = st.checkbox("Minder dan 500 km privé per jaar (geen bijtelling)?", value=False)
             
             if is_minder_dan_500:
-                st.info("ℹ️ **Geen bijtelling:** Let op, om 0% bijtelling te verantwoorden is een sluitende rittenadministratie (of 'Verklaring geen privégebruik auto') vereist.")
+                st.info("ℹ️ **Geen bijtelling:** Let op, om 0% bijtelling te verantwoorden is een sluitende rittenadministratie vereist.")
             else:
                 if is_young_manual and not is_young_auto:
                     st.warning(f"⚠️ **Pas op:** Voertuig is pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
@@ -233,35 +233,43 @@ if kenteken_input:
             
             bijt_bruto = st.number_input("Bijtelling (€/jaar) - handmatig aanpasbaar", value=float(calc_bijt))
             
-            z_km = st.number_input("Zakelijke km / jaar", value=25000)
-            p_km = st.number_input("Privé km / jaar", value=5000 if not is_minder_dan_500 else 0)
+            z_km = st.number_input("Zakelijke km / jaar", value=0, min_value=0)
+            p_km = st.number_input("Privé km / jaar", value=0, min_value=0)
             totaal_km = z_km + p_km
             
         with col2:
-            st.markdown("**Verbruik & Kosten**")
+            st.markdown("**Verbruik & Brandstof**")
             brandstof_kosten = 0.0
             laad_kosten = 0.0
             
-            # SPLITSING VAN BRANDSTOF EN LAADKOSTEN
-            if is_brandstof or (not is_brandstof and not is_ev): # Fallback als RDW leeg is
-                verbruik_l = st.number_input("Verbruik Benzine/Diesel (L/100km)", value=auto['rdw_verbruik'])
+            if is_brandstof or (not is_brandstof and not is_ev):
+                if auto['rdw_verbruik'] == 0.0:
+                    st.info("ℹ️ Verbruik Benzine/Diesel niet bekend bij RDW. Vul dit zelf in.")
+                verbruik_l = st.number_input("Verbruik Benzine/Diesel (L/100km)", value=float(auto['rdw_verbruik']))
                 prijs_l = st.number_input("Prijs per Liter (€)", value=1.95)
                 calc_br = ((z_km + p_km) / 100) * verbruik_l * prijs_l
                 brandstof_kosten = st.number_input("Totale Brandstofkosten p/j (€)", value=float(calc_br))
             
             if is_ev:
-                verbruik_kwh = st.number_input("Verbruik Stroom (kWh/100km)", value=18.0)
+                st.info("ℹ️ Stroomverbruik niet bekend bij RDW. Vul dit zelf in.")
+                verbruik_kwh = st.number_input("Verbruik Stroom (kWh/100km)", value=0.0)
                 prijs_kwh = st.number_input("Prijs per kWh (€)", value=0.50)
                 calc_laad = ((z_km + p_km) / 100) * verbruik_kwh * prijs_kwh
                 laad_kosten = st.number_input("Totale Laadkosten p/j (€)", value=float(calc_laad))
             
         with col3:
             st.markdown("**Vaste & Variabele Kosten**")
+            st.caption("⚠️ *Onderhoud en Verzekering zijn geschat o.b.v. kilometers en voertuigwaarde. Pas deze zelf aan naar de werkelijke kosten.*")
+            
             mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
             mrb = st.number_input("Wegenbelasting (€ / jaar)", value=int(mrb_jaar))
-            onderhoud = st.number_input("Onderhoud (€ / jaar)", value=600)
-            verzekering = st.number_input("Verzekering (€ / jaar)", value=800)
-            overige = st.number_input("Overige kosten (€ / jaar)", value=500)
+            
+            calc_onderhoud = int(totaal_km * 0.04) 
+            calc_verzekering = int(min(2500, (auto['catalogusprijs'] * 0.015) + 300)) if auto['catalogusprijs'] > 0 else 800
+            
+            onderhoud = st.number_input("Onderhoud (€ / jaar)", value=calc_onderhoud)
+            verzekering = st.number_input("Verzekering (€ / jaar)", value=calc_verzekering)
+            overige = st.number_input("Overige kosten (€ / jaar)", value=250)
             lease = st.number_input("Lease/Rente (€ / jaar)", value=0)
 
         if totaal_km > 0 and (z_km / totaal_km) < 0.10:
@@ -343,7 +351,7 @@ if kenteken_input:
             pdf.set_font(f, '', 10); pdf.set_text_color(0); pdf.set_fill_color(245)
             pdf.cell(35, 6, " Merk & Type:", fill=True); pdf.cell(155, 6, clean(f"{auto['merk']} {auto['handelsbenaming']} ({kenteken_input.upper()})"), fill=True, ln=True)
             pdf.cell(35, 6, " Brandstof:", fill=True); pdf.cell(155, 6, brandstof_t, fill=True, ln=True)
-            pdf.cell(35, 6, " Eerste toelating:", fill=True); pdf.cell(155, 6, f"{auto['toelating']} ({leeftijd.years} jaar, {leeftijd.months} mnd)", fill=True, ln=True)
+            pdf.cell(35, 6, " Eerste toelating:", fill=True); pdf.cell(155, 6, f"{toelating_nl} ({leeftijd.years} jaar, {leeftijd.months} mnd)", fill=True, ln=True)
             pdf.cell(35, 6, " Youngtimer:", fill=True); pdf.cell(155, 6, "Ja" if is_young_manual else "Nee", fill=True, ln=True)
             pdf.cell(35, 6, " < 500 km prive:", fill=True); pdf.cell(155, 6, "Ja (Geen bijtelling)" if is_minder_dan_500 else "Nee", fill=True, ln=True); pdf.ln(2)
             
@@ -355,7 +363,6 @@ if kenteken_input:
             pdf.cell(90, 7, "Auto zakelijk", border='B'); pdf.cell(10, 7); pdf.cell(90, 7, "Auto prive", border='B', ln=True)
             pdf.set_font(f, '', 10); pdf.set_text_color(0); pdf.ln(2)
             
-            # Dynamische rijen (Splitsing Brandstof & Laadkosten)
             left_col = []
             if is_brandstof or (not is_brandstof and not is_ev): left_col.append(("Brandstofkosten:", f"EUR {fmt(brandstof_kosten)}"))
             if is_ev: left_col.append(("Laadkosten:", f"EUR {fmt(laad_kosten)}"))
@@ -387,7 +394,8 @@ if kenteken_input:
             pdf.set_font(f, '', 8); pdf.set_text_color(0, 0, 0)
             
             punten = [
-                "- Kosten zijn schattingen gebaseerd op Belastingdienst tarieven 2026.", 
+                "- Kosten voor onderhoud en verzekering zijn schattingen op basis van gereden kilometers en cataloguswaarde.",
+                "- Wegenbelasting is gebaseerd op Belastingdienst tarieven 2026.", 
                 "- Na 5 jaar vervallen de afschrijvingskosten.", 
                 "- Bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming."
             ]
