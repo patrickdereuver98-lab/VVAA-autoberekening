@@ -49,35 +49,13 @@ vvaa_css = f"""
     .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
     div[data-testid="stExpander"] details div {{ color: {VVAA_BLAUW} !important; }}
     
-    /* --- BULLETPROOF FIX VOOR DROPDOWNS --- */
-    input, select, div[data-baseweb="select"] > div {{ 
-        background-color: white !important; 
-        color: {VVAA_BLAUW} !important; 
-        border-radius: 6px !important; 
-        border: 1px solid #ddd !important; 
-    }}
+    /* --- FIX VOOR DE DROPDOWNS: Altijd wit met blauwe tekst --- */
+    input, select, div[data-baseweb="select"] > div {{ background-color: white !important; color: {VVAA_BLAUW} !important; border-radius: 6px !important; border: 1px solid #ddd !important; }}
     
     div[data-baseweb="select"] div[class*="singleValue"] {{ color: {VVAA_BLAUW} !important; }}
-    
-    /* Forceer de uitklaplijst (popover) naar wit */
-    div[data-baseweb="popover"], div[data-baseweb="popover"] > div, ul[role="listbox"] {{ 
-        background-color: white !important; 
-    }}
-    
-    /* Forceer de opties in de lijst naar blauwe tekst op witte achtergrond */
-    div[data-baseweb="popover"] li, ul[role="listbox"] li {{ 
-        color: {VVAA_BLAUW} !important; 
-        background-color: white !important; 
-    }}
-
-    /* Forceer alle tekst binnen de lijst items naar blauw */
-    div[data-baseweb="popover"] li *, ul[role="listbox"] li * {{
-        color: {VVAA_BLAUW} !important;
-    }}
-
-    ul[role="listbox"] li:hover, div[data-baseweb="popover"] li:hover {{ 
-        background-color: #f0f2f6 !important; 
-    }}
+    div[data-baseweb="popover"] > div, ul[role="listbox"] {{ background-color: white !important; }}
+    ul[role="listbox"] li {{ color: {VVAA_BLAUW} !important; background-color: white !important; }}
+    ul[role="listbox"] li:hover {{ background-color: #f0f2f6 !important; }}
 
     div[data-testid="metric-container"] {{
         background-color: white; border-left: 5px solid {VVAA_ORANJE}; padding: 15px 20px; border-radius: 8px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
@@ -274,15 +252,18 @@ if kenteken_input:
             with top3:
                 st.markdown("#### Meldingen")
                 if is_minder_dan_500:
-                    st.info("ℹ️ **Geen bijtelling:** Zorg voor een sluitende rittenadministratie.")
+                    st.info("ℹ️ **Geen bijtelling:** Zorg voor een sluitende rittenadministratie om dit aan te tonen.")
+                
                 if is_young_manual and not is_young_auto:
-                    st.warning(f"⚠️ **Pas op:** Voertuig is pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
+                    st.warning(f"⚠️ **Let op:** Het voertuig is pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
                 elif is_young_auto and not is_young_manual:
-                    st.info(f"💡 **Tip:** De youngtimer-regeling is waarschijnlijk voordeliger.")
+                    st.info(f"💡 **Tip:** Dit voertuig is ouder dan 15 jaar. De youngtimer-regeling is waarschijnlijk voordeliger.")
+                
                 elif not is_full_ev and is_ev:
-                    st.info("ℹ️ **Hybride auto:** 22% standaard bijtellingstarief is van toepassing.")
+                    st.info("ℹ️ **Hybride:** Voor hybride auto's geldt de standaard bijtelling van 22%.")
+                
                 if is_vervallen_ev and not is_young_manual:
-                    st.info(f"⚡ **Let op:** 60-maandenregel EV vervallen. Regels {peil_jaar} toegepast.")
+                    st.info(f"⚡ **Let op:** De 60-maandenregel voor deze EV is verlopen. De regels van {peil_jaar} zijn toegepast.")
 
             st.markdown("---")
             st.markdown("### 💶 Financiële Specificaties")
@@ -359,7 +340,7 @@ if kenteken_input:
                 calc_onderhoud = round(totaal_km * 0.04) if gebruik_schatting else 0
                 
                 onderhoud = st.number_input("Onderhoud (€ / jaar)", value=float(calc_onderhoud))
-                verzekering = st.number_input("Verzekering (€ / jaar)", value=0.0)
+                verzekering = st.number_input("Verzekering (€ / jaar)", value=0.0, help="Te persoonlijk om in te schatten. Vul uw eigen premie in.")
                 overige = st.number_input("Overige kosten (€ / jaar)", value=250.0 if gebruik_schatting else 0.0)
                 
                 # Nieuwe Lease / Rente velden (afhankelijk van top vinkje)
@@ -389,7 +370,7 @@ if kenteken_input:
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
             if is_gemaximeerd:
-                st.warning(f"⚖️ **Let op: Bijtelling gemaximeerd.** Uw berekende bijtelling (€ {fmt(bijt_bruto)}) is hoger dan de totale werkelijke autokosten (€ {fmt(tot_k)}). U hoeft niet meer bij te tellen dan uw autokosten. Uw bijtelling is afgetopt op € {fmt(bijt_definitief)}.")
+                st.warning(f"⚖️ **Let op: Bijtelling gemaximeerd.** De bijtelling is hoger dan de autokosten en daarom afgetopt op de werkelijke kosten (€ {fmt(bijt_definitief)}).")
                 
             st.success(f"💡 **Conclusie:** Vanuit fiscaal oogpunt is de optie **{advies}**.")
             
@@ -489,7 +470,7 @@ if kenteken_input:
             pdf.ln(2); pdf.set_font(f, 'B', 10)
             pdf.cell(45, 6, "Totale kosten:"); pdf.cell(45, 6, clean(f"EUR {fmt(tot_k)}"), align='R', ln=True)
             
-            lbl_bijt = "Bijtelling (gemaximeerd):" if is_gemaximeerd else ("Bijtelling (< 500km):" if is_minder_dan_500 else "Bijtelling:")
+            lbl_bijt = "Bijtelling (afgetopt):" if is_gemaximeerd else ("Bijtelling (< 500km):" if is_minder_dan_500 else "Bijtelling:")
             pdf.cell(45, 6, lbl_bijt); pdf.cell(45, 6, clean(f"- EUR {fmt(bijt_definitief)}"), align='R', ln=True); pdf.ln(2)
             
             pdf.set_fill_color(245)
@@ -510,6 +491,8 @@ if kenteken_input:
             ]
             if is_minder_dan_500:
                 punten.insert(0, "- LET OP: Voor 0% bijtelling is een sluitende rittenadministratie of verklaring vereist.")
+            if peil_jaar > toel_dt.year:
+                punten.insert(0, f"- LET OP: De 60-maandenregel voor deze EV is verlopen. Tarief van {peil_jaar} is toegepast.")
             if is_gemaximeerd:
                 punten.insert(0, "- LET OP: De berekende bijtelling was hoger dan de totale kosten, en is daarom gemaximeerd.")
                 
