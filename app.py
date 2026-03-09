@@ -4,6 +4,7 @@ import datetime
 import os
 import pandas as pd
 import math
+import re
 from fpdf import FPDF
 from dateutil.relativedelta import relativedelta
 
@@ -39,18 +40,28 @@ vvaa_css = f"""
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
 
-# --- 2. DOMEIN BEVEILIGING ---
-def check_auth():
-    if not st.user.email:
-        st.warning("Gelieve in te loggen met uw VvAA e-mailadres.")
-        st.stop()
-    if not st.user.email.lower().endswith("@vvaa.nl"):
-        st.error("Toegang geweigerd. Gebruik een @vvaa.nl account.")
-        st.stop()
-# check_auth()
-
 def fmt(val):
     return f"{int(round(val)):,}".replace(",", ".")
+
+# --- 2. LIVE BRANDSTOF PRIJZEN SCRAPER ---
+@st.cache_data(ttl=86400) # Vernieuwt 1x per 24 uur
+def haal_actuele_brandstofprijzen():
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        # Haal actuele Gemiddelde Landelijke Adviesprijs (GLA) op van UnitedConsumers
+        res = requests.get("https://www.unitedconsumers.com/tanken", headers=headers, timeout=5)
+        e95_match = re.search(r'Euro95 \(E10\).*?€\s*(\d{1},\d{3})', res.text, re.DOTALL)
+        diesel_match = re.search(r'Diesel.*?€\s*(\d{1},\d{3})', res.text, re.DOTALL)
+        lpg_match = re.search(r'LPG.*?€\s*(\d{1},\d{3})', res.text, re.DOTALL)
+        
+        return {
+            "benzine": float(e95_match.group(1).replace(',', '.')) if e95_match else 2.05,
+            "diesel": float(diesel_match.group(1).replace(',', '.')) if diesel_match else 1.85,
+            "lpg": float(lpg_match.group(1).replace(',', '.')) if lpg_match else 0.85
+        }
+    except:
+        # Fallback als de website niet bereikbaar is
+        return {"benzine": 2.05, "diesel": 1.85, "lpg": 0.85}
 
 # --- 3. DATA LADEN UIT CSV (Tarieven 2026) ---
 @st.cache_data
@@ -240,32 +251,45 @@ if kenteken_input:
             st.markdown("**Verbruik & Brandstof**")
             brandstof_kosten = 0.0
             laad_kosten = 0.0
+            actuele_prijzen = haal_actuele_brandstofprijzen()
             
             if is_brandstof or (not is_brandstof and not is_ev):
                 if auto['rdw_verbruik'] == 0.0:
-                    st.info("ℹ️ Verbruik Benzine/Diesel niet bekend bij RDW. Vul dit zelf in.")
+                    st.info("ℹ️ Verbruik niet bekend bij RDW. Vul dit zelf in.")
                 verbruik_l = st.number_input("Verbruik Benzine/Diesel (L/100km)", value=float(auto['rdw_verbruik']))
-                prijs_l = st.number_input("Prijs per Liter (€)", value=1.95)
+                
+                # Bepaal automatisch de live prijs obv brandstoftype
+                bs_lower = [b.lower() for b in auto['brandstoffen']]
+                if any("diesel" in b for b in bs_lower): def_prijs = actuele_prijzen["diesel"]
+                elif any("lpg" in b for b in bs_lower): def_prijs = actuele_prijzen["lpg"]
+                else: def_prijs = actuele_prijzen["benzine"]
+                
+                prijs_l = st.number_input("Prijs per Liter (€)", value=def_prijs, help="Dit is de actuele Landelijke Adviesprijs. Pas aan indien nodig.")
                 calc_br = ((z_km + p_km) / 100) * verbruik_l * prijs_l
                 brandstof_kosten = st.number_input("Totale Brandstofkosten p/j (€)", value=float(calc_br))
             
             if is_ev:
-                st.info("ℹ️ Stroomverbruik niet bekend bij RDW. Vul dit zelf in.")
+                st.info("ℹ️ Stroomverbruik niet bekend bij RDW. Vul dit zelf in (bijv. 18.0).")
                 verbruik_kwh = st.number_input("Verbruik Stroom (kWh/100km)", value=0.0)
-                prijs_kwh = st.number_input("Prijs per kWh (€)", value=0.50)
+                prijs_kwh = st.number_input("Prijs per kWh (€)", value=0.40, help="Schatting: € 0,40 is een gemiddelde voor thuis/publiek laden.")
                 calc_laad = ((z_km + p_km) / 100) * verbruik_kwh * prijs_kwh
                 laad_kosten = st.number_input("Totale Laadkosten p/j (€)", value=float(calc_laad))
             
         with col3:
             st.markdown("**Vaste & Variabele Kosten**")
-            st.info("ℹ️ Verzekering, onderhoud en overige kosten staan standaard op € 0. Vul uw eigen inschatting in voor een berekening op maat.")
             
             mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
             mrb = st.number_input("Wegenbelasting (€ / jaar)", value=int(mrb_jaar))
             
-            onderhoud = st.number_input("Onderhoud (€ / jaar)", value=0)
-            verzekering = st.number_input("Verzekering (€ / jaar)", value=0)
-            overige = st.number_input("Overige kosten (€ / jaar)", value=0)
+            # Vinkje voor automatische schatting vaste kosten
+            gebruik_schatting = st.checkbox("🧮 Bereken schatting voor vaste kosten", value=False, help="Vink aan om een inschatting voor verzekering en onderhoud te maken.")
+            
+            calc_onderhoud = int(totaal_km * 0.04) if gebruik_schatting else 0
+            calc_verzekering = int(min(2500, (auto['catalogusprijs'] * 0.015) + 300)) if gebruik_schatting and auto['catalogusprijs'] > 0 else 0
+            
+            onderhoud = st.number_input("Onderhoud (€ / jaar)", value=calc_onderhoud)
+            verzekering = st.number_input("Verzekering (€ / jaar)", value=calc_verzekering)
+            overige = st.number_input("Overige kosten (€ / jaar)", value=250 if gebruik_schatting else 0)
             lease = st.number_input("Lease/Rente (€ / jaar)", value=0)
 
         if totaal_km > 0 and (z_km / totaal_km) < 0.10:
@@ -390,7 +414,7 @@ if kenteken_input:
             pdf.set_font(f, '', 8); pdf.set_text_color(0, 0, 0)
             
             punten = [
-                "- Kosten voor brandstof, onderhoud en verzekering zijn gebaseerd op uw eigen opgave.",
+                "- De getoonde autokosten zijn deels gebaseerd op uw eigen schatting en ingevulde parameters.",
                 "- Wegenbelasting is gebaseerd op Belastingdienst tarieven 2026.", 
                 "- Na 5 jaar vervallen de afschrijvingskosten.", 
                 "- Bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming."
