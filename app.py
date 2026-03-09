@@ -11,20 +11,16 @@ from dateutil.relativedelta import relativedelta
 # --- 1. VvAA HUISSTIJL & CONFIGURATIE ---
 VVAA_ORANJE = "#E84E0F"
 VVAA_BLAUW = "#00315C"
-VVAA_GRIJS = "#F4F6F8" # Moderne, zeer lichte grijze achtergrond
+VVAA_GRIJS = "#F4F6F8" 
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
 
 vvaa_css = f"""
 <style>
-    /* Algehele moderne achtergrond */
     .stApp {{ background-color: {VVAA_GRIJS} !important; }}
-    
-    /* Tekstkleuren forceren naar VvAA Blauw voor perfecte leesbaarheid */
     .stApp, p, label, span, div[data-testid="stMarkdownContainer"] > p, li {{ color: {VVAA_BLAUW} !important; font-family: 'Arial', sans-serif; }}
     h1, h2, h3, h4, h5, h6 {{ color: {VVAA_ORANJE} !important; font-family: 'Arial', sans-serif !important; font-weight: bold; }}
     
-    /* Standaard Knop (Berekenen) */
     .stButton>button {{ 
         background-color: {VVAA_ORANJE} !important; color: white !important; 
         border-radius: 6px; border: none; padding: 10px 24px; font-weight: bold; width: 100%; margin-top: 28px;
@@ -33,7 +29,6 @@ vvaa_css = f"""
     .stButton>button:hover {{ background-color: #c7400a !important; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }}
     .stButton>button p, .stButton>button span {{ color: white !important; }}
     
-    /* Download Knop */
     div.stDownloadButton > button {{ 
         background-color: {VVAA_BLAUW} !important; color: white !important; border-radius: 8px !important;
         padding: 15px 32px !important; font-size: 18px !important; font-weight: bold !important; width: 100% !important;
@@ -42,25 +37,17 @@ vvaa_css = f"""
     div.stDownloadButton > button:hover {{ background-color: #001f3f !important; box-shadow: 0 6px 12px rgba(0,0,0,0.2); }}
     div.stDownloadButton > button p, div.stDownloadButton > button span {{ color: white !important; }}
     
-    /* Alerts & Meldingen */
     div[data-testid="stAlert"] {{ background-color: white !important; border-left: 5px solid {VVAA_ORANJE} !important; padding: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
     div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
     
-    /* Expander (Uitklapmenu) Fix */
     div[data-testid="stExpander"] {{ background-color: white !important; border-left: 4px solid {VVAA_ORANJE} !important; border-radius: 6px; }}
-    div[data-testid="stExpander"] summary p {{ font-weight: bold !important; color: {VVAA_BLAUW} !important; }}
+    .streamlit-expanderHeader {{ color: {VVAA_BLAUW} !important; font-weight: bold; }}
     div[data-testid="stExpander"] details div {{ color: {VVAA_BLAUW} !important; }}
     
-    /* Input velden */
     input, select, div[data-baseweb="select"] > div {{ background-color: white !important; color: {VVAA_BLAUW} !important; border-radius: 6px !important; border: 1px solid #ddd !important; }}
     
-    /* Metric Cards (Resultaat boxen) */
     div[data-testid="metric-container"] {{
-        background-color: white;
-        border-left: 5px solid {VVAA_ORANJE};
-        padding: 15px 20px;
-        border-radius: 8px;
-        box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
+        background-color: white; border-left: 5px solid {VVAA_ORANJE}; padding: 15px 20px; border-radius: 8px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
     }}
     div[data-testid="metric-container"] label {{ font-size: 16px !important; font-weight: bold; color: {VVAA_BLAUW} !important; }}
     div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{ color: {VVAA_ORANJE} !important; font-weight: bold; }}
@@ -235,29 +222,45 @@ if kenteken_input:
         
         # CARD 2: Parameters
         with st.container(border=True):
-            st.markdown("### ⚙️ 2. Voertuig Parameters")
+            st.markdown("### ⚙️ 2. Gebruik & Uitgangspunten")
+            
+            # --- NIEUWE TOP-SECTIE VOOR KILOMETERS EN HOOFDVINKJES ---
+            top1, top2, top3 = st.columns(3)
+            with top1:
+                st.markdown("#### Kilometers per jaar")
+                z_km = st.number_input("Zakelijke km / jaar", value=0, min_value=0)
+                p_km = st.number_input("Privé km / jaar", value=0, min_value=0)
+                totaal_km = z_km + p_km
+                
+            with top2:
+                st.markdown("#### Fiscale Keuzes")
+                is_young_manual = st.checkbox("Youngtimer regeling toepassen?", value=is_young_auto)
+                is_minder_dan_500 = st.checkbox("Minder dan 500 km privé per jaar?", value=False)
+                is_geleased = st.checkbox("Wordt de auto geleased of gefinancierd?", value=False)
+                
+            with top3:
+                st.markdown("#### Meldingen")
+                if is_minder_dan_500:
+                    st.info("ℹ️ **Geen bijtelling:** Zorg voor een sluitende rittenadministratie.")
+                if is_young_manual and not is_young_auto:
+                    st.warning(f"⚠️ **Pas op:** Voertuig is pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
+                elif is_young_auto and not is_young_manual:
+                    st.info(f"💡 **Tip:** De youngtimer-regeling is waarschijnlijk voordeliger.")
+                elif not is_full_ev and is_ev:
+                    st.info("ℹ️ **Hybride auto:** 22% standaard bijtellingstarief is van toepassing.")
+                if is_vervallen_ev and not is_young_manual:
+                    st.info(f"⚡ **Let op:** 60-maandenregel EV vervallen. Regels {peil_jaar} toegepast.")
+
+            st.markdown("---")
+            st.markdown("### 💶 Financiële Specificaties")
+            
+            # --- FINANCIELE SPECIFICATIES ---
             col1, col2, col3 = st.columns(3)
             
             with col1:
                 st.markdown("#### Waarde & Bijtelling")
                 st.write(f"Cataloguswaarde (RDW): **€ {fmt(auto['catalogusprijs'])}**")
                 aanschaf = st.number_input("Aanschafwaarde / Dagwaarde (€)", value=int(auto['catalogusprijs']))
-                
-                is_young_manual = st.checkbox("Youngtimer regeling toepassen?", value=is_young_auto)
-                is_minder_dan_500 = st.checkbox("Minder dan 500 km privé per jaar?", value=False)
-                
-                if is_minder_dan_500:
-                    st.info("ℹ️ **Geen bijtelling:** Zorg voor een sluitende rittenadministratie.")
-                else:
-                    if is_young_manual and not is_young_auto:
-                        st.warning(f"⚠️ **Pas op:** Voertuig is pas {leeftijd.years} jaar oud (vereist: 15 jaar).")
-                    elif is_young_auto and not is_young_manual:
-                        st.info(f"💡 **Tip:** De youngtimer-regeling is waarschijnlijk voordeliger.")
-                    elif not is_full_ev and is_ev:
-                        st.info("ℹ️ **Hybride auto:** 22% standaard bijtellingstarief is van toepassing.")
-                        
-                    if is_vervallen_ev and not is_young_manual:
-                        st.info(f"⚡ **Let op: 60-maandenregel EV.** Termijn is vervallen. Regels {peil_jaar} toegepast.")
                 
                 idx_bijt = bepaal_bijtelling_index(peil_jaar, is_full_ev, is_young_manual)
                 gekozen_bijt = st.selectbox("Bijtellingsprofiel", BIJTELLING_OPTIES, index=idx_bijt)
@@ -273,10 +276,6 @@ if kenteken_input:
                         calc_bijt = auto['catalogusprijs'] * bijt_perc
                 
                 bijt_bruto = st.number_input("Bijtelling (€/jaar) - overschrijfbaar", value=float(calc_bijt))
-                
-                z_km = st.number_input("Zakelijke km / jaar", value=0, min_value=0)
-                p_km = st.number_input("Privé km / jaar", value=0, min_value=0)
-                totaal_km = z_km + p_km
                 
             with col2:
                 st.markdown("#### Verbruik & Brandstof")
@@ -314,27 +313,32 @@ if kenteken_input:
                 if gebruik_schatting:
                     with st.expander("ℹ️ Hoe berekenen wij deze schatting?"):
                         st.write("""
-                        - **Onderhoud:** € 0,04 per gereden kilometer (totaal).
-                        - **Verzekering:** € 300,- basis + 1,5% van de cataloguswaarde.
+                        - **Onderhoud:** € 0,04 per gereden kilometer.
+                        - **Verzekering:** Afhankelijk van persoon/no-claim. (Blijft op € 0, vul zelf in).
                         - **Overig:** Vaste aanname van € 250,-.
                         """)
-                else:
-                    st.caption("*Vaste kosten staan op € 0. Vul uw eigen in, of gebruik de automatische schatting hierboven.*")
                 
                 calc_onderhoud = int(totaal_km * 0.04) if gebruik_schatting else 0
-                calc_verzekering = int(min(2500, (auto['catalogusprijs'] * 0.015) + 300)) if gebruik_schatting and auto['catalogusprijs'] > 0 else 0
                 
                 onderhoud = st.number_input("Onderhoud (€ / jaar)", value=calc_onderhoud)
-                verzekering = st.number_input("Verzekering (€ / jaar)", value=calc_verzekering)
+                verzekering = st.number_input("Verzekering (€ / jaar)", value=0, help="Te persoonlijk om in te schatten. Vul uw eigen premie in.")
                 overige = st.number_input("Overige kosten (€ / jaar)", value=250 if gebruik_schatting else 0)
-                lease = st.number_input("Lease/Rente (€ / jaar)", value=0)
+                
+                # Nieuwe Lease / Rente velden (afhankelijk van top vinkje)
+                lease_kosten = 0.0
+                rente_kosten = 0.0
+                if is_geleased:
+                    st.markdown("#### Financiering")
+                    st.caption("ℹ️ *Bij Operational Lease zijn Wegenbelasting, Onderhoud en Verzekering vaak al inbegrepen. Zet deze hierboven dan op € 0.*")
+                    lease_kosten = st.number_input("Leasekosten (Operational/Private) (€/j)", value=0)
+                    rente_kosten = st.number_input("Rentekosten lening (Financial) (€/j)", value=0)
 
         # Fiscale eisen & berekeningen
         if totaal_km > 0 and (z_km / totaal_km) < 0.10:
             st.error(f"🚨 **Fiscale Eis:** Auto wordt voor {(z_km / totaal_km)*100:.1f}% zakelijk gebruikt. Minimaal 10% is vereist.")
 
         afschr = (aanschaf * 0.8) * 0.2
-        tot_k = brandstof_kosten + laad_kosten + mrb + onderhoud + verzekering + overige + afschr + lease
+        tot_k = brandstof_kosten + laad_kosten + mrb + onderhoud + verzekering + overige + afschr + lease_kosten + rente_kosten
         
         is_gemaximeerd = bijt_bruto > tot_k and not is_minder_dan_500
         bijt_definitief = min(bijt_bruto, tot_k) if not is_minder_dan_500 else 0.0
@@ -413,7 +417,8 @@ if kenteken_input:
             pdf.cell(35, 6, " Brandstof:", fill=True); pdf.cell(155, 6, brandstof_t, fill=True, ln=True)
             pdf.cell(35, 6, " Eerste toelating:", fill=True); pdf.cell(155, 6, f"{toelating_nl} ({leeftijd.years} jaar, {leeftijd.months} mnd)", fill=True, ln=True)
             pdf.cell(35, 6, " Youngtimer:", fill=True); pdf.cell(155, 6, "Ja" if is_young_manual else "Nee", fill=True, ln=True)
-            pdf.cell(35, 6, " < 500 km prive:", fill=True); pdf.cell(155, 6, "Ja (Geen bijtelling)" if is_minder_dan_500 else "Nee", fill=True, ln=True); pdf.ln(2)
+            pdf.cell(35, 6, " < 500 km prive:", fill=True); pdf.cell(155, 6, "Ja (Geen bijtelling)" if is_minder_dan_500 else "Nee", fill=True, ln=True)
+            pdf.cell(35, 6, " Lease auto:", fill=True); pdf.cell(155, 6, "Ja" if is_geleased else "Nee", fill=True, ln=True); pdf.ln(2)
             
             pdf.cell(45, 5, "Cataloguswaarde:"); pdf.cell(45, 5, f"EUR {fmt(auto['catalogusprijs'])}", align='R')
             pdf.cell(10, 5); pdf.cell(45, 5, "Aanschafwaarde:"); pdf.cell(45, 5, f"EUR {fmt(aanschaf)}", align='R', ln=True)
@@ -426,7 +431,20 @@ if kenteken_input:
             left_col = []
             if is_brandstof or (not is_brandstof and not is_ev): left_col.append(("Brandstofkosten:", f"EUR {fmt(brandstof_kosten)}"))
             if is_ev: left_col.append(("Laadkosten:", f"EUR {fmt(laad_kosten)}"))
-            left_col.extend([("Wegenbelasting:", f"EUR {fmt(mrb)}"), ("Onderhoud:", f"EUR {fmt(onderhoud)}"), ("Verzekering:", f"EUR {fmt(verzekering)}"), ("Overige autokosten:", f"EUR {fmt(overige)}"), ("Afschrijving:", f"EUR {fmt(afschr)}"), ("Lease/Rente:", f"EUR {fmt(lease)}")])
+            
+            left_col.extend([
+                ("Wegenbelasting:", f"EUR {fmt(mrb)}"), 
+                ("Onderhoud:", f"EUR {fmt(onderhoud)}"), 
+                ("Verzekering:", f"EUR {fmt(verzekering)}"), 
+                ("Overige autokosten:", f"EUR {fmt(overige)}"), 
+                ("Afschrijving:", f"EUR {fmt(afschr)}")
+            ])
+            
+            if is_geleased:
+                left_col.extend([
+                    ("Leasekosten:", f"EUR {fmt(lease_kosten)}"),
+                    ("Rentekosten:", f"EUR {fmt(rente_kosten)}")
+                ])
             
             right_col = [("Vergoeding:", f"EUR {fmt(pri_aftrek)}"), ("Zakelijke km:", fmt(z_km)), ("Privé km:", fmt(p_km)), ("Vergoeding p/km:", "EUR 0,23")]
             
