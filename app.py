@@ -193,7 +193,6 @@ if kenteken_input:
             is_vervallen_ev = False
             peil_jaar = toel_dt.year
         
-        # Geüpdatete weergave inclusief Datum Toelating
         st.success(f"**{auto['merk']} ({kenteken_input.upper()}) - {auto['handelsbenaming']} - {brandstof_t} | Toelating: {toelating_nl} ({leeftijd.years} jaar en {leeftijd.months} maanden oud)**")
         
         col1, col2, col3 = st.columns(3)
@@ -259,17 +258,14 @@ if kenteken_input:
             
         with col3:
             st.markdown("**Vaste & Variabele Kosten**")
-            st.caption("⚠️ *Onderhoud en Verzekering zijn geschat o.b.v. kilometers en voertuigwaarde. Pas deze zelf aan naar de werkelijke kosten.*")
+            st.info("ℹ️ Verzekering, onderhoud en overige kosten staan standaard op € 0. Vul uw eigen inschatting in voor een berekening op maat.")
             
             mrb_jaar = bereken_mrb_csv(auto['gewicht'], auto['brandstoffen'], prov)
             mrb = st.number_input("Wegenbelasting (€ / jaar)", value=int(mrb_jaar))
             
-            calc_onderhoud = int(totaal_km * 0.04) 
-            calc_verzekering = int(min(2500, (auto['catalogusprijs'] * 0.015) + 300)) if auto['catalogusprijs'] > 0 else 800
-            
-            onderhoud = st.number_input("Onderhoud (€ / jaar)", value=calc_onderhoud)
-            verzekering = st.number_input("Verzekering (€ / jaar)", value=calc_verzekering)
-            overige = st.number_input("Overige kosten (€ / jaar)", value=250)
+            onderhoud = st.number_input("Onderhoud (€ / jaar)", value=0)
+            verzekering = st.number_input("Verzekering (€ / jaar)", value=0)
+            overige = st.number_input("Overige kosten (€ / jaar)", value=0)
             lease = st.number_input("Lease/Rente (€ / jaar)", value=0)
 
         if totaal_km > 0 and (z_km / totaal_km) < 0.10:
@@ -306,8 +302,8 @@ if kenteken_input:
             st.metric("Fiscale aftrekpost", f"€ {fmt(zak_aftrek)}")
         with res2:
             st.markdown("#### 🏠 Auto Privé")
-            st.write(f"Vergoeding: **€ 0,23 p/km**")
-            st.write(f"Zakelijke kilometers: **{fmt(z_km)}**")
+            st.write(f"Vergoeding: **€ 0,23 per zakelijke km**")
+            st.write(f"Aantal zakelijke km: **{fmt(z_km)}**")
             st.metric("Fiscale aftrekpost", f"€ {fmt(pri_aftrek)}")
 
         if gevalideerd:
@@ -394,7 +390,7 @@ if kenteken_input:
             pdf.set_font(f, '', 8); pdf.set_text_color(0, 0, 0)
             
             punten = [
-                "- Kosten voor onderhoud en verzekering zijn schattingen op basis van gereden kilometers en cataloguswaarde.",
+                "- Kosten voor brandstof, onderhoud en verzekering zijn gebaseerd op uw eigen opgave.",
                 "- Wegenbelasting is gebaseerd op Belastingdienst tarieven 2026.", 
                 "- Na 5 jaar vervallen de afschrijvingskosten.", 
                 "- Bij inruil kan een boekwinst ontstaan, welke belast kan zijn in de onderneming."
