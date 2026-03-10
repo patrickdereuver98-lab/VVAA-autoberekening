@@ -20,6 +20,11 @@ st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="w
 # CSS is enorm opgeschoond omdat config.toml nu het zware werk doet!
 vvaa_css = f"""
 <style>
+    /* --- ACHTERGRONDKLEUR HERSTEL --- */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+        background-color: {VVAA_LICHTORANJE} !important;
+    }}
+
     /* --- 1. ALGEMENE SCALING --- */
     html, body {{
         font-size: 0.92rem !important;
