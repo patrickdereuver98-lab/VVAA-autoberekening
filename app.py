@@ -643,8 +643,7 @@ if kenteken_input:
             pdf.set_font(f, '', 8)
             
             punten = [
-                "- De getoonde berekening is een indicatie op basis van uw eigen opgave en algemene aannames. De werkelijke cijfers kunnen hiervan afwijken.",
-                "- Wegenbelasting is berekend op basis van de actuele Belastingdienst tarieven.", 
+                "- De getoonde berekening is een indicatie op basis van uw eigen opgave en algemene aannames. De werkelijke cijfers kunnen hiervan afwijken.", 
                 "- Na 5 jaar na aanschaf vervallen in de regel de afschrijvingskosten.", 
                 "- Let op: Bij latere inruil of verkoop van een zakelijke auto kan een boekwinst ontstaan, welke belast is in de onderneming."
             ]
