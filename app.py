@@ -17,101 +17,94 @@ VVAA_MELDING_ORANJE = "#FDCEA8"
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
 
-# CSS is enorm opgeschoond omdat config.toml nu het zware werk doet!
+# --- 2. CSS STYLING ---
 vvaa_css = f"""
 <style>
     /* --- ACHTERGRONDKLEUR HERSTEL --- */
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
-        background-color: {VVAA_LICHTORANJE} !important;
-    }}
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{ background-color: {VVAA_LICHTORANJE} !important; }}
 
-    /* --- 1. ALGEMENE SCALING --- */
-    html, body {{
-        font-size: 0.92rem !important;
-    }}
+    /* --- ALGEMENE SCALING --- */
+    html, body {{ font-size: 0.92rem !important; }}
     
-    /* --- 2. MODERNE HEADERS & UITLIJNING --- */
+    /* --- MODERNE HEADERS & UITLIJNING --- */
     h3 {{ border-bottom: 2px solid {VVAA_ORANJE} !important; padding-bottom: 8px !important; margin-bottom: 20px !important; font-size: 1.3rem !important; }}
-    
-    [data-testid="column"] h4 {{
-        margin-top: 0 !important;
-        margin-bottom: 12px !important;
-        padding-top: 0 !important;
-        font-size: 1.05rem !important;
-        color: {VVAA_ORANJE} !important;
-    }}
+    [data-testid="column"] h4 {{ margin-top: 0 !important; margin-bottom: 12px !important; padding-top: 0 !important; font-size: 1.05rem !important; color: {VVAA_ORANJE} !important; }}
 
-    /* --- 3. MODERNE CARDS (Witte vlakken voor de layout) --- */
-    div[data-testid="stVerticalBlockBorderWrapper"] {{
-        background-color: #FFFFFF !important;
-        border: none !important;
-        border-radius: 10px !important;
-        box-shadow: 0 4px 15px rgba(0, 49, 92, 0.05) !important;
-        padding: 15px !important;
-    }}
+    /* --- MODERNE CARDS --- */
+    div[data-testid="stVerticalBlockBorderWrapper"] {{ background-color: #FFFFFF !important; border: none !important; border-radius: 10px !important; box-shadow: 0 4px 15px rgba(0, 49, 92, 0.05) !important; padding: 15px !important; }}
 
-    /* --- 4. SPECIFIEKE TWEAKS --- */
-    /* Forceer hoofdletters specifiek in het kenteken veld */
-    input[aria-label="Kenteken *"] {{
-        text-transform: uppercase !important;
-    }}
+    /* --- SPECIFIEKE TWEAKS --- */
+    input[aria-label="Kenteken *"] {{ text-transform: uppercase !important; }}
 
-    /* --- 5. KNOPPEN (BUTTONS) --- */
-    .stButton>button {{ 
-        background-color: {VVAA_ORANJE} !important; color: white !important; 
-        border-radius: 6px; border: none; padding: 10px 24px; font-weight: bold; width: 100%; margin-top: 28px;
-        transition: all 0.3s ease;
-    }}
+    /* --- KNOPPEN (BUTTONS) --- */
+    .stButton>button {{ background-color: {VVAA_ORANJE} !important; color: white !important; border-radius: 6px; border: none; padding: 10px 24px; font-weight: bold; width: 100%; margin-top: 28px; transition: all 0.3s ease; }}
     .stButton>button:hover {{ background-color: #C7400A !important; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(232, 78, 15, 0.3) !important; }}
     
-    div.stDownloadButton > button {{ 
-        background-color: {VVAA_BLAUW} !important; color: white !important; border-radius: 8px !important;
-        padding: 15px 32px !important; font-size: 18px !important; font-weight: bold !important; width: 100% !important;
-        box-shadow: 0 4px 6px rgba(0, 49, 92, 0.15) !important; border: none !important; transition: all 0.3s ease;
-        display: block !important;
-    }}
+    div.stDownloadButton > button {{ background-color: {VVAA_BLAUW} !important; color: white !important; border-radius: 8px !important; padding: 15px 32px !important; font-size: 18px !important; font-weight: bold !important; width: 100% !important; box-shadow: 0 4px 6px rgba(0, 49, 92, 0.15) !important; border: none !important; transition: all 0.3s ease; display: block !important; }}
     div.stDownloadButton > button:hover {{ background-color: #001F3F !important; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 49, 92, 0.25) !important; }}
     
-    /* --- 6. MELDINGEN & ALERTS --- */
-    div[data-testid="stAlert"] {{ 
-        background-color: transparent !important;
-        background: transparent !important;
-        border: none !important; 
-        padding: 0 !important; 
-    }}
-    div[data-testid="stAlert"] > div[role="alert"] {{
-        background-color: {VVAA_MELDING_ORANJE} !important; 
-        color: {VVAA_BLAUW} !important; 
-        border-radius: 8px !important;
-        padding: 16px !important;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
-        border: 1px solid #F0D5C9 !important;
-    }}
+    /* --- MELDINGEN & ALERTS --- */
+    div[data-testid="stAlert"] {{ background-color: transparent !important; background: transparent !important; border: none !important; padding: 0 !important; }}
+    div[data-testid="stAlert"] > div[role="alert"] {{ background-color: {VVAA_MELDING_ORANJE} !important; color: {VVAA_BLAUW} !important; border-radius: 8px !important; padding: 16px !important; box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important; border: 1px solid #F0D5C9 !important; }}
     div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
     div[data-testid="stAlert"] svg {{ fill: {VVAA_BLAUW} !important; }}
 
-    /* --- 7. EMAIL CODE BLOCK FIX (Arial 10pt) --- */
-    [data-testid="stCodeBlock"] {{
-        background-color: transparent !important;
-    }}
-    [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code {{
-        font-family: 'Arial', sans-serif !important;
-        font-size: 10pt !important;
-        white-space: pre-wrap !important;
-        color: #00315C !important;
-        background-color: #FFFFFF !important;
-        border: 1px solid #E0E6ED;
-        border-radius: 6px;
-        padding: 15px;
-    }}
+    /* --- EMAIL CODE BLOCK FIX --- */
+    [data-testid="stCodeBlock"] {{ background-color: transparent !important; }}
+    [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code {{ font-family: 'Arial', sans-serif !important; font-size: 10pt !important; white-space: pre-wrap !important; color: #00315C !important; background-color: #FFFFFF !important; border: 1px solid #E0E6ED; border-radius: 6px; padding: 15px; }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
 
+# --- 3. ALGEMENE FUNCTIES & CLASSES (GEOPTIMALISEERD) ---
 def fmt(val):
     return f"{int(round(val)):,}".replace(",", ".")
 
-# --- 2. LIVE BRANDSTOF PRIJZEN SCRAPER ---
+def clean_text(t): 
+    return str(t).replace('€', 'EUR').encode('latin-1', 'replace').decode('latin-1')
+
+# VVAAPDF Class is naar de globale scope verplaatst voor betere performance
+class VVAAPDF(FPDF):
+    def __init__(self):
+        super().__init__()
+        if os.path.exists("vvaa_font.ttf"):
+            self.add_font("VvAA_Font", "", "vvaa_font.ttf", uni=True)
+            if os.path.exists("vvaa_font_bold.ttf"):
+                self.add_font("VvAA_Font", "B", "vvaa_font_bold.ttf", uni=True)
+            self.font_fam = "VvAA_Font"
+        else:
+            self.font_fam = "Arial"
+
+    def header(self):
+        self.set_fill_color(232, 78, 15)
+        self.rect(0, 0, 210, 4, 'F')
+        
+        logo = "VvAA_logo.png" 
+        if os.path.exists(logo): 
+            self.image(logo, 10, 10, 35)
+        
+        self.set_font(self.font_fam, 'B', 22)
+        self.set_text_color(0, 49, 92)
+        self.set_xy(10, 12)
+        self.cell(190, 10, clean_text("Fiscaal Auto-advies"), align='R')
+        
+        self.set_font(self.font_fam, '', 12)
+        self.set_text_color(232, 78, 15)
+        self.set_xy(10, 22)
+        self.cell(190, 6, clean_text("Zakelijk of privé rijden?"), align='R')
+        
+    def footer(self):
+        self.set_y(-20)
+        self.set_draw_color(232, 78, 15)
+        self.set_line_width(0.5)
+        self.line(10, self.get_y(), 200, self.get_y())
+        self.ln(4)
+        self.set_text_color(0, 49, 92)
+        self.set_font(self.font_fam, '', 8)
+        self.cell(0, 4, clean_text("VvAA | www.vvaa.nl | Voor zorgverleners, door zorgverleners"), align='C', ln=True)
+        self.cell(0, 4, clean_text(f"Advies gegenereerd op: {datetime.datetime.now().strftime('%d-%m-%Y om %H:%M')}"), align='C', ln=True)
+
+# --- 4. DATA OPSLAG & APIS ---
 @st.cache_data(ttl=86400) 
 def haal_actuele_brandstofprijzen():
     try:
@@ -137,17 +130,6 @@ def load_mrb_data():
 
 df_mrb, df_prov = load_mrb_data()
 
-# --- 4. MODERNE HEADER LAYOUT ---
-col_logo, col_title = st.columns([1, 5])
-with col_logo:
-    logo_path = "VvAA_logo.png" 
-    if os.path.exists(logo_path):
-        st.image(logo_path, width=130) 
-with col_title:
-    st.markdown(f"<h2 style='color: {VVAA_BLAUW}; margin: 0; padding-top: 15px;'>Autoberekening: Zakelijk of Privé?</h2>", unsafe_allow_html=True)
-st.markdown(f"<hr style='border: 2px solid {VVAA_ORANJE}; border-radius: 5px; margin-top: 10px; margin-bottom: 30px;'>", unsafe_allow_html=True)
-
-# --- 5. RDW API FUNCTIE ---
 @st.cache_data
 def get_rdw_data(kenteken):
     kenteken = kenteken.replace("-", "").upper()
@@ -213,6 +195,16 @@ def bepaal_bijtelling_index(peil_jaar, is_full_ev, is_youngtimer):
     elif peil_jaar == 2022: return 5
     elif peil_jaar in [2023, 2024]: return 6
     else: return 7
+
+# --- 5. MODERNE HEADER LAYOUT ---
+col_logo, col_title = st.columns([1, 5])
+with col_logo:
+    logo_path = "VvAA_logo.png" 
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=130) 
+with col_title:
+    st.markdown(f"<h2 style='color: {VVAA_BLAUW}; margin: 0; padding-top: 15px;'>Autoberekening: Zakelijk of Privé?</h2>", unsafe_allow_html=True)
+st.markdown(f"<hr style='border: 2px solid {VVAA_ORANJE}; border-radius: 5px; margin-top: 10px; margin-bottom: 30px;'>", unsafe_allow_html=True)
 
 # --- 6. INTERFACE / CARDS ---
 with st.container(border=True):
@@ -280,7 +272,6 @@ if kenteken_input:
                 is_minder_dan_500 = st.checkbox("Wordt er minder dan 500 km per jaar privé gereden?", value=False)
                 is_geleased = st.checkbox("Wordt de auto geleased of gefinancierd?", value=False)
                 
-                # --- NIEUW: BTW MODULE ---
                 is_btw_klant = st.checkbox("Ondernemer voor de btw?", value=False)
                 if is_btw_klant:
                     btw_marge = st.checkbox("↳ Marge-auto of >4 jaar in gebruik? (1,5% btw-forfait)", value=False)
@@ -332,7 +323,6 @@ if kenteken_input:
                 
                 bijt_bruto = st.number_input("Bijtelling per jaar (€)", value=float(round(calc_bijt)))
 
-                # --- NIEUW: BTW CORRECTIE VELD ---
                 if is_btw_klant:
                     calc_btw_corr = 0.0
                     if not is_minder_dan_500:
@@ -413,7 +403,6 @@ if kenteken_input:
                     rente_kosten = st.number_input("Rentekosten lening per jaar (€)", value=0.0)
 
         afschr = round((aanschaf * 0.8) * 0.2)
-        # Btw-correctie toegevoegd aan de totale kosten
         tot_k = round(brandstof_kosten + laad_kosten + mrb + onderhoud + verzekering + overige + afschr + lease_kosten + rente_kosten + btw_correctie)
         
         is_gemaximeerd = bijt_bruto > tot_k and not is_minder_dan_500
@@ -443,7 +432,6 @@ if kenteken_input:
             sim_b = 0.0 if is_minder_dan_500 else min(bijt_bruto, sim_k)
             return (sim_k - sim_b) - (z * 0.23)
             
-        # Alleen berekenen als Zakelijk momenteel NIET de winnaar is
         if advies == "Privé voordeliger":
             sign_0 = sim_verschil(0) > 0 
             for test_z in range(100, 150001, 100): 
@@ -460,7 +448,6 @@ if kenteken_input:
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
-            # --- AANGEPASTE CONCLUSIE BANNER (Compacter) ---
             st.markdown(f"""
             <div style="background-color: {VVAA_ORANJE}; color: white; padding: 16px; border-radius: 8px; text-align: center; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(232, 78, 15, 0.2);">
                 <span style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Conclusie Fiscaal Advies</span><br>
@@ -474,7 +461,6 @@ if kenteken_input:
             if advies == "Privé voordeliger" and omslagpunt:
                 st.info(f"⚖️ **Tip van de adviseur:** Zakelijk rijden wordt in deze situatie pas voordeliger bij **{richting} dan {fmt(omslagpunt)} zakelijke kilometers** per jaar.")
             
-            # --- DYNAMISCHE HTML LIJST VOOR DE ZAKELIJKE KOSTEN ---
             zak_lijst = [
                 ("Brandstof / Laadkosten", brandstof_kosten + laad_kosten),
                 ("Wegenbelasting", mrb),
@@ -538,48 +524,6 @@ if kenteken_input:
             st.markdown(html_result, unsafe_allow_html=True)
 
         if gevalideerd:
-            def clean(t): return str(t).replace('€', 'EUR').encode('latin-1', 'replace').decode('latin-1')
-            
-            class VVAAPDF(FPDF):
-                def __init__(self):
-                    super().__init__()
-                    if os.path.exists("vvaa_font.ttf"):
-                        self.add_font("VvAA_Font", "", "vvaa_font.ttf", uni=True)
-                        if os.path.exists("vvaa_font_bold.ttf"):
-                            self.add_font("VvAA_Font", "B", "vvaa_font_bold.ttf", uni=True)
-                        self.font_fam = "VvAA_Font"
-                    else:
-                        self.font_fam = "Arial"
-
-                def header(self):
-                    self.set_fill_color(232, 78, 15)
-                    self.rect(0, 0, 210, 4, 'F')
-                    
-                    logo = "VvAA_logo.png" 
-                    if os.path.exists(logo): 
-                        self.image(logo, 10, 10, 35)
-                    
-                    self.set_font(self.font_fam, 'B', 22)
-                    self.set_text_color(0, 49, 92)
-                    self.set_xy(10, 12)
-                    self.cell(190, 10, clean("Fiscaal Auto-advies"), align='R')
-                    
-                    self.set_font(self.font_fam, '', 12)
-                    self.set_text_color(232, 78, 15)
-                    self.set_xy(10, 22)
-                    self.cell(190, 6, clean("Zakelijk of privé rijden?"), align='R')
-                    
-                def footer(self):
-                    self.set_y(-20)
-                    self.set_draw_color(232, 78, 15)
-                    self.set_line_width(0.5)
-                    self.line(10, self.get_y(), 200, self.get_y())
-                    self.ln(4)
-                    self.set_text_color(0, 49, 92)
-                    self.set_font(self.font_fam, '', 8)
-                    self.cell(0, 4, clean("VvAA | www.vvaa.nl | Voor zorgverleners, door zorgverleners"), align='C', ln=True)
-                    self.cell(0, 4, clean(f"Advies gegenereerd op: {datetime.datetime.now().strftime('%d-%m-%Y om %H:%M')}"), align='C', ln=True)
-
             pdf = VVAAPDF()
             pdf.set_auto_page_break(auto=True, margin=25)
             pdf.add_page()
@@ -592,8 +536,8 @@ if kenteken_input:
             pdf.set_xy(15, 40)
             pdf.set_font(f, 'B', 12)
             pdf.set_text_color(0, 49, 92)
-            pdf.cell(90, 6, clean("1. Relatiegegevens"), ln=False)
-            pdf.cell(90, 6, clean("2. Voertuigspecificaties"), ln=True)
+            pdf.cell(90, 6, clean_text("1. Relatiegegevens"), ln=False)
+            pdf.cell(90, 6, clean_text("2. Voertuigspecificaties"), ln=True)
             
             pdf.set_font(f, '', 10)
             pdf.set_text_color(0, 0, 0)
@@ -610,16 +554,16 @@ if kenteken_input:
             pdf.set_y(48)
             for row in data_rows:
                 pdf.set_x(15)
-                pdf.set_font(f, 'B', 10); pdf.cell(25, 4.5, clean(row[0][0]))
-                pdf.set_font(f, '', 10); pdf.cell(65, 4.5, clean(row[0][1]))
-                pdf.set_font(f, 'B', 10); pdf.cell(35, 4.5, clean(row[1][0]))
-                pdf.set_font(f, '', 10); pdf.cell(50, 4.5, clean(row[1][1]), ln=True)
+                pdf.set_font(f, 'B', 10); pdf.cell(25, 4.5, clean_text(row[0][0]))
+                pdf.set_font(f, '', 10); pdf.cell(65, 4.5, clean_text(row[0][1]))
+                pdf.set_font(f, 'B', 10); pdf.cell(35, 4.5, clean_text(row[1][0]))
+                pdf.set_font(f, '', 10); pdf.cell(50, 4.5, clean_text(row[1][1]), ln=True)
 
             pdf.ln(12)
 
             pdf.set_font(f, 'B', 12)
             pdf.set_text_color(0, 49, 92)
-            pdf.cell(0, 6, clean("3. Uitgangspunten voor berekening"), ln=True)
+            pdf.cell(0, 6, clean_text("3. Uitgangspunten voor berekening"), ln=True)
             pdf.set_draw_color(0, 49, 92)
             pdf.set_line_width(0.3)
             pdf.line(10, pdf.get_y(), 200, pdf.get_y())
@@ -638,20 +582,20 @@ if kenteken_input:
             ]
             for k in keuzes:
                 pdf.cell(5, 5, "-")
-                pdf.cell(0, 5, clean(k), ln=True)
+                pdf.cell(0, 5, clean_text(k), ln=True)
 
             pdf.ln(8)
 
             pdf.set_font(f, 'B', 12)
             pdf.set_text_color(0, 49, 92)
-            pdf.cell(0, 6, clean("4. Financiële Vergelijking (Per Jaar)"), ln=True)
+            pdf.cell(0, 6, clean_text("4. Financiële Vergelijking (Per Jaar)"), ln=True)
 
             pdf.set_fill_color(0, 49, 92) 
             pdf.set_text_color(255, 255, 255)
             pdf.set_font(f, 'B', 10)
-            pdf.cell(95, 8, clean("  AUTO ZAKELIJK"), fill=True, align='L')
+            pdf.cell(95, 8, clean_text("  AUTO ZAKELIJK"), fill=True, align='L')
             pdf.cell(5, 8, "") 
-            pdf.cell(90, 8, clean("  AUTO PRIVÉ"), fill=True, align='L', ln=True)
+            pdf.cell(90, 8, clean_text("  AUTO PRIVÉ"), fill=True, align='L', ln=True)
 
             pdf.set_text_color(0, 0, 0)
             
@@ -684,52 +628,52 @@ if kenteken_input:
                 pdf.set_fill_color(244, 246, 248) 
 
                 pdf.set_font(f, '', 10)
-                pdf.cell(65, 7, clean(f" {l_lbl}"), fill=fill)
+                pdf.cell(65, 7, clean_text(f" {l_lbl}"), fill=fill)
                 pdf.set_font(f, 'B' if l_val else '', 10)
-                pdf.cell(30, 7, clean(l_val), align='R', fill=fill)
+                pdf.cell(30, 7, clean_text(l_val), align='R', fill=fill)
                 
                 pdf.cell(5, 7, "") 
 
                 pdf.set_font(f, '', 10)
-                pdf.cell(60, 7, clean(f" {r_lbl}"), fill=fill)
+                pdf.cell(60, 7, clean_text(f" {r_lbl}"), fill=fill)
                 pdf.set_font(f, 'B' if r_val else '', 10)
-                pdf.cell(30, 7, clean(r_val), align='R', fill=fill, ln=True)
+                pdf.cell(30, 7, clean_text(r_val), align='R', fill=fill, ln=True)
 
             pdf.set_fill_color(249, 232, 223) 
             pdf.set_font(f, 'B', 10)
-            pdf.cell(65, 7, clean(" Totale autokosten"), fill=True)
-            pdf.cell(30, 7, clean(f"EUR {fmt(tot_k)}"), align='R', fill=True)
+            pdf.cell(65, 7, clean_text(" Totale autokosten"), fill=True)
+            pdf.cell(30, 7, clean_text(f"EUR {fmt(tot_k)}"), align='R', fill=True)
             pdf.cell(5, 7, "")
             pdf.cell(90, 7, "", fill=True, ln=True)
 
             lbl_bijt = " Bijtelling (gemaximeerd afgetopt)" if is_gemaximeerd else (" Bijtelling (< 500km)" if is_minder_dan_500 else " Bijtelling")
             pdf.set_text_color(232, 78, 15) 
-            pdf.cell(65, 7, clean(lbl_bijt), fill=True)
-            pdf.cell(30, 7, clean(f"- EUR {fmt(bijt_definitief)}"), align='R', fill=True)
+            pdf.cell(65, 7, clean_text(lbl_bijt), fill=True)
+            pdf.cell(30, 7, clean_text(f"- EUR {fmt(bijt_definitief)}"), align='R', fill=True)
             pdf.cell(5, 7, "")
             pdf.cell(90, 7, "", fill=True, ln=True)
 
             pdf.set_fill_color(0, 49, 92)
             pdf.set_text_color(255, 255, 255)
             pdf.set_font(f, 'B', 11)
-            pdf.cell(65, 10, clean(" TOTALE FISCALE AFTREKPOST"), fill=True)
-            pdf.cell(30, 10, clean(f"EUR {fmt(zak_aftrek)}"), align='R', fill=True)
+            pdf.cell(65, 10, clean_text(" TOTALE FISCALE AFTREKPOST"), fill=True)
+            pdf.cell(30, 10, clean_text(f"EUR {fmt(zak_aftrek)}"), align='R', fill=True)
             pdf.cell(5, 10, "")
-            pdf.cell(60, 10, clean(" TOTALE FISCALE AFTREKPOST"), fill=True)
-            pdf.cell(30, 10, clean(f"EUR {fmt(pri_aftrek)}"), align='R', fill=True, ln=True)
+            pdf.cell(60, 10, clean_text(" TOTALE FISCALE AFTREKPOST"), fill=True)
+            pdf.cell(30, 10, clean_text(f"EUR {fmt(pri_aftrek)}"), align='R', fill=True, ln=True)
 
             pdf.ln(12)
 
             pdf.set_fill_color(232, 78, 15) 
             pdf.set_text_color(255, 255, 255)
             pdf.set_font(f, 'B', 13)
-            pdf.cell(190, 14, clean(f"  CONCLUSIE: Vanuit fiscaal oogpunt is {advies.upper()}"), fill=True, ln=True, align='C')
+            pdf.cell(190, 14, clean_text(f"  CONCLUSIE: Vanuit fiscaal oogpunt is {advies.upper()}"), fill=True, ln=True, align='C')
             
             pdf.ln(8)
 
             pdf.set_text_color(0, 49, 92)
             pdf.set_font(f, 'B', 10)
-            pdf.cell(0, 5, clean("Belangrijke aandachtspunten bij dit advies:"), ln=True)
+            pdf.cell(0, 5, clean_text("Belangrijke aandachtspunten bij dit advies:"), ln=True)
             pdf.set_text_color(80, 80, 80) 
             pdf.set_font(f, '', 8)
             
@@ -747,7 +691,7 @@ if kenteken_input:
                 punten.insert(0, "- LET OP: De berekende btw-correctie is gebaseerd op het forfait. Deze kan in de praktijk afwijken (bijv. als er aantoonbare privé kilometers zijn, of indien het bedrag hoger uitvalt dan de in dat jaar afgetrokken btw).")
                 
             for p in punten: 
-                pdf.multi_cell(0, 4, clean(p))
+                pdf.multi_cell(0, 4, clean_text(p))
 
             fname = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
             st.download_button("📄 Fiscaal Rapport Downloaden (.PDF)", data=pdf.output(dest='S').encode('latin-1'), file_name=fname)
