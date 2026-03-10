@@ -318,8 +318,14 @@ if kenteken_input:
                     with st.expander("ℹ️ Uitleg Brandstof & Bron"):
                         st.write("De voorgestelde literprijs is gebaseerd op de actuele gemiddelde landelijke adviesprijs (bron: UnitedConsumers). De kosten worden berekend via de formule: *(Totale km / 100) × Verbruik × Literprijs*.")
                 
+                # Variabelen initialiseren om NameErrors te voorkomen bij de omslagpunt berekening
                 brandstof_kosten = 0.0
                 laad_kosten = 0.0
+                verbruik_l = 0.0
+                prijs_l = 0.0
+                verbruik_kwh = 0.0
+                price_kwh = 0.0
+                
                 actuele_prijzen = haal_actuele_brandstofprijzen()
                 
                 if is_brandstof or (not is_brandstof and not is_ev):
@@ -384,6 +390,33 @@ if kenteken_input:
         pri_aftrek = round(z_km * 0.23)
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
+        # --- NIEUW: OMSLAGPUNT BEREKENING (Simulatie) ---
+        var_cost_per_km = 0.0
+        if is_brandstof or (not is_brandstof and not is_ev):
+            var_cost_per_km += (verbruik_l / 100.0) * prijs_l
+        if is_ev:
+            var_cost_per_km += (verbruik_kwh / 100.0) * price_kwh
+        if gebruik_schatting:
+            var_cost_per_km += 0.04
+            
+        vaste_kosten = mrb + (0.0 if gebruik_schatting else onderhoud) + verzekering + overige + afschr + lease_kosten + rente_kosten
+        vaste_prive_km_kosten = var_cost_per_km * p_km
+        
+        omslagpunt = None
+        beter_bij_meer = ""
+        
+        def sim_verschil(z):
+            sim_k = vaste_kosten + vaste_prive_km_kosten + (var_cost_per_km * z)
+            sim_b = 0.0 if is_minder_dan_500 else min(bijt_bruto, sim_k)
+            return (sim_k - sim_b) - (z * 0.23)
+            
+        sign_0 = sim_verschil(0) > 0 # Is zakelijk beter bij 0 km?
+        for test_z in range(100, 150001, 100): # Simuleer tot max 150.000 zakelijke km
+            if (sim_verschil(test_z) > 0) != sign_0:
+                omslagpunt = test_z
+                beter_bij_meer = "Zakelijk rijden" if sim_verschil(test_z) > 0 else "Privé rijden"
+                break
+
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
@@ -391,6 +424,10 @@ if kenteken_input:
                 st.warning(f"**Let op: Bijtelling gemaximeerd.** Uw berekende bijtelling (€ {fmt(bijt_bruto)}) is hoger dan de totale werkelijke autokosten (€ {fmt(tot_k)}). U hoeft niet meer bij te tellen dan uw autokosten. Uw bijtelling is afgetopt op € {fmt(bijt_definitief)}.")
                 
             st.success(f"**Conclusie:** Vanuit fiscaal oogpunt is de optie **{advies}**.")
+            
+            # --- OMSLAGPUNT WEERGAVE ---
+            if omslagpunt:
+                st.info(f"⚖️ **Advies Omslagpunt:** Bij deze uitgangspunten ligt het kantelpunt op circa **{fmt(omslagpunt)} zakelijke kilometers** per jaar. Vanaf dit aantal wordt de keuze voor **{beter_bij_meer}** voordeliger.")
             
             html_result = f"""<div style='display: flex; gap: 20px; margin-top: 20px; margin-bottom: 20px; flex-wrap: wrap;'>
 <div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
@@ -427,7 +464,6 @@ if kenteken_input:
 </div>"""
             st.markdown(html_result, unsafe_allow_html=True)
 
-        # --- NIEUWE MODERNE PDF GENERATIE ---
         if gevalideerd:
             def clean(t): return str(t).replace('€', 'EUR').encode('latin-1', 'replace').decode('latin-1')
             
@@ -443,29 +479,24 @@ if kenteken_input:
                         self.font_fam = "Arial"
 
                 def header(self):
-                    # Moderne oranje accentlijn bovenin
                     self.set_fill_color(232, 78, 15)
                     self.rect(0, 0, 210, 4, 'F')
                     
-                    # Logo aan de linkerkant
                     logo = "VvAA_logo.png" 
                     if os.path.exists(logo): 
                         self.image(logo, 10, 10, 35)
                     
-                    # Titel rechts strak uitgelijnd
                     self.set_font(self.font_fam, 'B', 22)
                     self.set_text_color(0, 49, 92)
                     self.set_xy(10, 12)
                     self.cell(190, 10, clean("Fiscaal Auto-advies"), align='R')
                     
-                    # Subtitel rechts
                     self.set_font(self.font_fam, '', 12)
                     self.set_text_color(232, 78, 15)
                     self.set_xy(10, 22)
                     self.cell(190, 6, clean("Zakelijk of privé rijden?"), align='R')
                     
                 def footer(self):
-                    # Strakke footer met lijn en stempel
                     self.set_y(-20)
                     self.set_draw_color(232, 78, 15)
                     self.set_line_width(0.5)
@@ -476,15 +507,13 @@ if kenteken_input:
                     self.cell(0, 4, clean("VvAA | www.vvaa.nl | Voor zorgverleners, door zorgverleners"), align='C', ln=True)
                     self.cell(0, 4, clean(f"Advies gegenereerd op: {datetime.datetime.now().strftime('%d-%m-%Y om %H:%M')}"), align='C', ln=True)
 
-            # --- Start PDF Opbouw ---
             pdf = VVAAPDF()
             pdf.set_auto_page_break(auto=True, margin=25)
             pdf.add_page()
             f = pdf.font_fam
             
-            # --- BLOK 1: Relatie & Voertuig (Gegroepeerd in zandkleurig blok) ---
             pdf.set_y(35)
-            pdf.set_fill_color(249, 232, 223) # VvAA Zandkleur
+            pdf.set_fill_color(249, 232, 223) 
             pdf.rect(10, 35, 190, 42, 'F')
             
             pdf.set_xy(15, 40)
@@ -508,16 +537,13 @@ if kenteken_input:
             pdf.set_y(48)
             for row in data_rows:
                 pdf.set_x(15)
-                # Links (Relatie)
                 pdf.set_font(f, 'B', 10); pdf.cell(25, 4.5, clean(row[0][0]))
                 pdf.set_font(f, '', 10); pdf.cell(65, 4.5, clean(row[0][1]))
-                # Rechts (Auto)
                 pdf.set_font(f, 'B', 10); pdf.cell(35, 4.5, clean(row[1][0]))
                 pdf.set_font(f, '', 10); pdf.cell(50, 4.5, clean(row[1][1]), ln=True)
 
             pdf.ln(12)
 
-            # --- BLOK 2: Uitgangspunten ---
             pdf.set_font(f, 'B', 12)
             pdf.set_text_color(0, 49, 92)
             pdf.cell(0, 6, clean("3. Uitgangspunten voor berekening"), ln=True)
@@ -542,13 +568,11 @@ if kenteken_input:
 
             pdf.ln(8)
 
-            # --- BLOK 3: Financiële Vergelijking (Zebra Tabel) ---
             pdf.set_font(f, 'B', 12)
             pdf.set_text_color(0, 49, 92)
             pdf.cell(0, 6, clean("4. Financiële Vergelijking (Per Jaar)"), ln=True)
 
-            # Tabel Headers
-            pdf.set_fill_color(0, 49, 92) # Dark blue
+            pdf.set_fill_color(0, 49, 92) 
             pdf.set_text_color(255, 255, 255)
             pdf.set_font(f, 'B', 10)
             pdf.cell(95, 8, clean("  AUTO ZAKELIJK"), fill=True, align='L')
@@ -580,41 +604,35 @@ if kenteken_input:
                 l_lbl, l_val = left_items[i] if i < len(left_items) else ("", "")
                 r_lbl, r_val = right_items[i] if i < len(right_items) else ("", "")
 
-                # Zebra arcering
                 fill = True if i % 2 == 0 else False
-                pdf.set_fill_color(244, 246, 248) # Lichtgrijs
+                pdf.set_fill_color(244, 246, 248) 
 
-                # Linker kolom
                 pdf.set_font(f, '', 10)
                 pdf.cell(65, 7, clean(f" {l_lbl}"), fill=fill)
                 pdf.set_font(f, 'B' if l_val else '', 10)
                 pdf.cell(30, 7, clean(l_val), align='R', fill=fill)
                 
-                pdf.cell(5, 7, "") # Midden marge
+                pdf.cell(5, 7, "") 
 
-                # Rechter kolom
                 pdf.set_font(f, '', 10)
                 pdf.cell(60, 7, clean(f" {r_lbl}"), fill=fill)
                 pdf.set_font(f, 'B' if r_val else '', 10)
                 pdf.cell(30, 7, clean(r_val), align='R', fill=fill, ln=True)
 
-            # Totalen Rij
-            pdf.set_fill_color(249, 232, 223) # Zandkleur voor subtotalen
+            pdf.set_fill_color(249, 232, 223) 
             pdf.set_font(f, 'B', 10)
             pdf.cell(65, 7, clean(" Totale autokosten"), fill=True)
             pdf.cell(30, 7, clean(f"EUR {fmt(tot_k)}"), align='R', fill=True)
             pdf.cell(5, 7, "")
             pdf.cell(90, 7, "", fill=True, ln=True)
 
-            # Bijtelling Rij
             lbl_bijt = " Bijtelling (gemaximeerd afgetopt)" if is_gemaximeerd else (" Bijtelling (< 500km)" if is_minder_dan_500 else " Bijtelling")
-            pdf.set_text_color(232, 78, 15) # Oranje text voor aftrek
+            pdf.set_text_color(232, 78, 15) 
             pdf.cell(65, 7, clean(lbl_bijt), fill=True)
             pdf.cell(30, 7, clean(f"- EUR {fmt(bijt_definitief)}"), align='R', fill=True)
             pdf.cell(5, 7, "")
             pdf.cell(90, 7, "", fill=True, ln=True)
 
-            # Fiscale Aftrekpost Rij (Knallend blauw)
             pdf.set_fill_color(0, 49, 92)
             pdf.set_text_color(255, 255, 255)
             pdf.set_font(f, 'B', 11)
@@ -626,24 +644,22 @@ if kenteken_input:
 
             pdf.ln(12)
 
-            # --- BLOK 4: Conclusie Banner ---
-            pdf.set_fill_color(232, 78, 15) # VvAA Oranje
+            pdf.set_fill_color(232, 78, 15) 
             pdf.set_text_color(255, 255, 255)
             pdf.set_font(f, 'B', 13)
-            # Center the text beautifully
             pdf.cell(190, 14, clean(f"  CONCLUSIE: Vanuit fiscaal oogpunt is {advies.upper()}"), fill=True, ln=True, align='C')
             
             pdf.ln(8)
 
-            # --- BLOK 5: Disclaimers ---
             pdf.set_text_color(0, 49, 92)
             pdf.set_font(f, 'B', 10)
             pdf.cell(0, 5, clean("Belangrijke aandachtspunten bij dit advies:"), ln=True)
-            pdf.set_text_color(80, 80, 80) # Donkergrijs voor disclaimers
+            pdf.set_text_color(80, 80, 80) 
             pdf.set_font(f, '', 8)
             
             punten = [
-                "- De getoonde berekening is een indicatie op basis van uw eigen opgave en algemene aannames. De werkelijke cijfers kunnen hiervan afwijken.", 
+                "- De getoonde berekening is een indicatie op basis van uw eigen opgave en algemene aannames. De werkelijke cijfers kunnen hiervan afwijken.",
+                "- Wegenbelasting is berekend op basis van de actuele Belastingdienst tarieven.", 
                 "- Na 5 jaar na aanschaf vervallen in de regel de afschrijvingskosten.", 
                 "- Let op: Bij latere inruil of verkoop van een zakelijke auto kan een boekwinst ontstaan, welke belast is in de onderneming."
             ]
@@ -655,9 +671,22 @@ if kenteken_input:
             for p in punten: 
                 pdf.multi_cell(0, 4, clean(p))
 
-            # Trigger Download
             fname = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
             st.download_button("📄 Fiscaal Rapport Downloaden (.PDF)", data=pdf.output(dest='S').encode('latin-1'), file_name=fname)
+
+            # --- NIEUW: MAGIC EMAIL GENERATOR ---
+            st.markdown("---")
+            st.markdown("### ✉️ Concept E-mail naar klant")
+            st.caption("Kopieer onderstaande tekst om het rapport snel en professioneel te delen via e-mail.")
+            
+            # Bepaal slim de voornaam van de relatie (pakt het eerste woord)
+            voornaam = klant_naam.split(' ')[0] if klant_naam else "klant"
+            
+            email_text = f"Beste {voornaam},\n\nHierbij ontvang je de autoberekening. We hebben de berekening gemaakt op basis van de gegevens die je ons had toegestuurd.\n\nUit de berekening blijkt dat het voor de {auto['merk'].title()} {auto['handelsbenaming'].title()} op dit moment het voordeligste is om deze {advies.split(' ')[0].lower()} te rijden.\n\nIn de bijlage vind je de uitgebreide berekening met alle specificaties en uitgangspunten. Mocht je nog vragen hebben of de berekening willen aanpassen, laat het dan gerust weten!"
+            
+            # Tekstvak waar de mail direct uit te kopiëren valt
+            st.text_area("Kopieer deze tekst:", value=email_text, height=200, label_visibility="collapsed")
+            
         else:
             st.info("ℹ️ Vul de Naam en een numeriek Lidnummer in om het rapport te kunnen genereren.")
     else:
