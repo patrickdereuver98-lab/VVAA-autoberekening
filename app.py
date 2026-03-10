@@ -50,16 +50,9 @@ vvaa_css = f"""
     div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
     div[data-testid="stAlert"] svg {{ fill: {VVAA_BLAUW} !important; }}
 
-    /* --- EMAIL CODE BLOCK FIX (Agressieve overschrijving naar Arial 10pt) --- */
+    /* --- EMAIL CODE BLOCK FIX --- */
     [data-testid="stCodeBlock"] {{ background-color: transparent !important; }}
-    [data-testid="stCodeBlock"] pre {{ background-color: #FFFFFF !important; border: 1px solid #E0E6ED !important; border-radius: 6px !important; padding: 15px !important; white-space: pre-wrap !important; }}
-    [data-testid="stCodeBlock"] code, 
-    [data-testid="stCodeBlock"] pre, 
-    [data-testid="stCodeBlock"] span {{ 
-        font-family: 'Arial', sans-serif !important; 
-        font-size: 10pt !important; 
-        color: #00315C !important; 
-    }}
+    [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code {{ font-family: 'Arial', sans-serif !important; font-size: 10pt !important; white-space: pre-wrap !important; color: #00315C !important; background-color: #FFFFFF !important; border: 1px solid #E0E6ED; border-radius: 6px; padding: 15px; }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
@@ -115,6 +108,31 @@ class VVAAPDF(FPDF):
         self.cell(0, 4, clean_text(f"Advies gegenereerd op: {datetime.datetime.now().strftime('%d-%m-%Y om %H:%M')}"), align='C', ln=True)
 
 # --- 4. DATA OPSLAG & APIS ---
+
+# --- NIEUW: FAIL-SAFE FISCALE REGELS INLADEN ---
+@st.cache_data
+def load_fiscale_regels():
+    # Dit is de 100% veilige terugval-basis. Als er geen extern bestand is, 
+    # of er gaat iets mis met inladen, gebruikt de tool altijd deze regels.
+    regels = {
+        "km_vergoeding": 0.23,
+        "btw_forfait_normaal": 0.027,
+        "btw_forfait_marge": 0.015
+    }
+    try:
+        if os.path.exists("fiscale_regels.csv"):
+            df_regels = pd.read_csv("fiscale_regels.csv", sep=";")
+            for index, row in df_regels.iterrows():
+                key = str(row['Regel']).strip()
+                val = float(str(row['Waarde']).replace(',', '.'))
+                if key in regels:
+                    regels[key] = val
+    except Exception:
+        pass # Geen bestand of een fout? Negeer stilzwijgend en gebruik de defaults.
+    return regels
+
+fiscale_regels = load_fiscale_regels()
+
 @st.cache_data(ttl=86400) 
 def haal_actuele_brandstofprijzen():
     try:
@@ -284,7 +302,9 @@ if kenteken_input:
                 
                 is_btw_klant = st.checkbox("Ondernemer voor de btw?", value=False)
                 if is_btw_klant:
-                    btw_marge = st.checkbox("↳ Marge-auto of >4 jaar in gebruik? (1,5% btw-forfait)", value=False)
+                    # Toon het specifieke BTW forfait o.b.v. de config
+                    forfait_tekst = f"{fiscale_regels['btw_forfait_marge']*100:.1f}%".replace('.', ',')
+                    btw_marge = st.checkbox(f"↳ Marge-auto of >4 jaar in gebruik? ({forfait_tekst} btw-forfait)", value=False)
                 else:
                     btw_marge = False
                 
@@ -336,7 +356,8 @@ if kenteken_input:
                 if is_btw_klant:
                     calc_btw_corr = 0.0
                     if not is_minder_dan_500:
-                        calc_btw_corr = auto['catalogusprijs'] * (0.015 if btw_marge else 0.027)
+                        # Berekening via het externe / fail-safe configuratiebestand
+                        calc_btw_corr = auto['catalogusprijs'] * (fiscale_regels["btw_forfait_marge"] if btw_marge else fiscale_regels["btw_forfait_normaal"])
                     btw_correctie = st.number_input("Btw-correctie privégebruik (€)", value=float(round(calc_btw_corr)))
                 else:
                     btw_correctie = 0.0
@@ -421,7 +442,9 @@ if kenteken_input:
         bijt_definitief = round(min(bijt_bruto, tot_k) if not is_minder_dan_500 else 0.0)
 
         zak_aftrek = round(tot_k - bijt_definitief)
-        pri_aftrek = round(z_km * 0.23)
+        
+        # --- BEREKENING MET DE GEKOPPELDE VARIABELE ---
+        pri_aftrek = round(z_km * fiscale_regels["km_vergoeding"])
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
         var_cost_per_km = 0.0
@@ -441,7 +464,8 @@ if kenteken_input:
         def sim_verschil(z):
             sim_k = vaste_kosten + vaste_prive_km_kosten + (var_cost_per_km * z)
             sim_b = 0.0 if is_minder_dan_500 else min(bijt_bruto, sim_k)
-            return (sim_k - sim_b) - (z * 0.23)
+            # Simuleer de vergoeding met de ingestelde variabele
+            return (sim_k - sim_b) - (z * fiscale_regels["km_vergoeding"])
             
         if advies == "Privé voordeliger":
             sign_0 = sim_verschil(0) > 0 
@@ -490,6 +514,9 @@ if kenteken_input:
             for lbl, val in zak_lijst:
                 zak_html += f"<div style='display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #F0F4F8;'><span>{lbl}</span><span>€ {fmt(val)}</span></div>"
             
+            # Formatting the km text properly for NL rules
+            km_text = f"€ {fiscale_regels['km_vergoeding']:.2f}".replace('.', ',')
+            
             html_result = f"""<div style='display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;'>
 <div style='flex: 1; min-width: 300px; display: flex; flex-direction: column; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
 <h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; border: none; padding-top: 0;'><span style='font-size:1.2em;'>🏢</span> Auto Zakelijk</h4>
@@ -517,7 +544,7 @@ if kenteken_input:
 <h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; border: none; padding-top: 0;'><span style='font-size:1.2em;'>🏠</span> Auto Privé</h4>
 
 <div style='font-size: 0.95em; color: #4A5568; margin-bottom: 15px;'>
-    <div style='display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #F0F4F8;'><span>Vergoeding per zakelijke km</span><span>€ 0,23</span></div>
+    <div style='display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #F0F4F8;'><span>Vergoeding per zakelijke km</span><span>{km_text}</span></div>
     <div style='display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #F0F4F8;'><span>Aantal zakelijke km</span><span>{fmt(z_km)}</span></div>
 </div>
 
@@ -567,8 +594,11 @@ if kenteken_input:
             if is_btw_klant:
                 left_items.append(("Btw-correctie privégebruik", f"EUR {fmt(btw_correctie)}"))
 
+            # Gebruik de variabele km_text ook in de PDF
+            pdf_km_text = f"EUR {fiscale_regels['km_vergoeding']:.2f}".replace('.', ',')
+            
             right_items = [
-                ("Vergoeding per zakelijke km", "EUR 0,23"),
+                ("Vergoeding per zakelijke km", pdf_km_text),
                 ("Aantal zakelijke km", f"{fmt(z_km)}"),
                 ("", ""), ("", ""), ("", ""), ("", "")
             ]
