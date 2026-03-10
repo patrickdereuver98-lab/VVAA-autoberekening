@@ -17,7 +17,7 @@ VVAA_MELDING_ORANJE = "#FDCEA8"
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
 
-# --- 2. CSS STYLING ---
+# CSS is enorm opgeschoond omdat config.toml nu het zware werk doet!
 vvaa_css = f"""
 <style>
     /* --- ACHTERGRONDKLEUR HERSTEL --- */
@@ -56,14 +56,13 @@ vvaa_css = f"""
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
 
-# --- 3. ALGEMENE FUNCTIES & CLASSES (GEOPTIMALISEERD) ---
+# --- 3. ALGEMENE FUNCTIES & CLASSES ---
 def fmt(val):
     return f"{int(round(val)):,}".replace(",", ".")
 
 def clean_text(t): 
     return str(t).replace('€', 'EUR').encode('latin-1', 'replace').decode('latin-1')
 
-# VVAAPDF Class is naar de globale scope verplaatst voor betere performance
 class VVAAPDF(FPDF):
     def __init__(self):
         super().__init__()
@@ -412,7 +411,6 @@ if kenteken_input:
         pri_aftrek = round(z_km * 0.23)
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
-        # --- OMSLAGPUNT BEREKENING (Simulatie) ---
         var_cost_per_km = 0.0
         if is_brandstof or (not is_brandstof and not is_ev):
             var_cost_per_km += (verbruik_l / 100.0) * prijs_l
@@ -524,24 +522,7 @@ if kenteken_input:
             st.markdown(html_result, unsafe_allow_html=True)
 
         if gevalideerd:
-            pdf = VVAAPDF()
-            pdf.set_auto_page_break(auto=True, margin=25)
-            pdf.add_page()
-            f = pdf.font_fam
-            
-            pdf.set_y(35)
-            pdf.set_fill_color(249, 232, 223) 
-            pdf.rect(10, 35, 190, 42, 'F')
-            
-            pdf.set_xy(15, 40)
-            pdf.set_font(f, 'B', 12)
-            pdf.set_text_color(0, 49, 92)
-            pdf.cell(90, 6, clean_text("1. Relatiegegevens"), ln=False)
-            pdf.cell(90, 6, clean_text("2. Voertuigspecificaties"), ln=True)
-            
-            pdf.set_font(f, '', 10)
-            pdf.set_text_color(0, 0, 0)
-            
+            # --- 1. DATA PREPARATIE VOOR PDF ---
             data_rows = [
                 [("Relatie:", klant_naam), ("Merk & Type:", f"{auto['merk']} {auto['handelsbenaming']}")],
                 [("Lidnummer:", klant_nummer), ("Kenteken:", kenteken_input)],
@@ -551,27 +532,6 @@ if kenteken_input:
                 [("", ""), ("Aanschaf/Taxatie:", f"EUR {fmt(aanschaf)}")]
             ]
             
-            pdf.set_y(48)
-            for row in data_rows:
-                pdf.set_x(15)
-                pdf.set_font(f, 'B', 10); pdf.cell(25, 4.5, clean_text(row[0][0]))
-                pdf.set_font(f, '', 10); pdf.cell(65, 4.5, clean_text(row[0][1]))
-                pdf.set_font(f, 'B', 10); pdf.cell(35, 4.5, clean_text(row[1][0]))
-                pdf.set_font(f, '', 10); pdf.cell(50, 4.5, clean_text(row[1][1]), ln=True)
-
-            pdf.ln(12)
-
-            pdf.set_font(f, 'B', 12)
-            pdf.set_text_color(0, 49, 92)
-            pdf.cell(0, 6, clean_text("3. Uitgangspunten voor berekening"), ln=True)
-            pdf.set_draw_color(0, 49, 92)
-            pdf.set_line_width(0.3)
-            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-            pdf.ln(3)
-
-            pdf.set_font(f, '', 10)
-            pdf.set_text_color(0, 0, 0)
-            
             keuzes = [
                 f"Verwachte kilometers: {fmt(z_km)} zakelijk / {fmt(p_km)} privé per jaar.",
                 f"Gekozen bijtellingsprofiel: {gekozen_bijt}.",
@@ -580,25 +540,7 @@ if kenteken_input:
                 f"Ondernemer voor de btw: {'Ja (Autokosten exclusief btw)' if is_btw_klant else 'Nee (Autokosten inclusief btw)'}.",
                 f"Voertuig wordt geleased of gefinancierd: {'Ja' if is_geleased else 'Nee'}."
             ]
-            for k in keuzes:
-                pdf.cell(5, 5, "-")
-                pdf.cell(0, 5, clean_text(k), ln=True)
 
-            pdf.ln(8)
-
-            pdf.set_font(f, 'B', 12)
-            pdf.set_text_color(0, 49, 92)
-            pdf.cell(0, 6, clean_text("4. Financiële Vergelijking (Per Jaar)"), ln=True)
-
-            pdf.set_fill_color(0, 49, 92) 
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font(f, 'B', 10)
-            pdf.cell(95, 8, clean_text("  AUTO ZAKELIJK"), fill=True, align='L')
-            pdf.cell(5, 8, "") 
-            pdf.cell(90, 8, clean_text("  AUTO PRIVÉ"), fill=True, align='L', ln=True)
-
-            pdf.set_text_color(0, 0, 0)
-            
             left_items = [
                 ("Brandstof / Laadkosten", f"EUR {fmt(brandstof_kosten+laad_kosten)}"),
                 ("Wegenbelasting", f"EUR {fmt(mrb)}"),
@@ -618,65 +560,8 @@ if kenteken_input:
                 ("Aantal zakelijke km", f"{fmt(z_km)}"),
                 ("", ""), ("", ""), ("", ""), ("", "")
             ]
-
             max_len = max(len(left_items), len(right_items))
-            for i in range(max_len):
-                l_lbl, l_val = left_items[i] if i < len(left_items) else ("", "")
-                r_lbl, r_val = right_items[i] if i < len(right_items) else ("", "")
 
-                fill = True if i % 2 == 0 else False
-                pdf.set_fill_color(244, 246, 248) 
-
-                pdf.set_font(f, '', 10)
-                pdf.cell(65, 7, clean_text(f" {l_lbl}"), fill=fill)
-                pdf.set_font(f, 'B' if l_val else '', 10)
-                pdf.cell(30, 7, clean_text(l_val), align='R', fill=fill)
-                
-                pdf.cell(5, 7, "") 
-
-                pdf.set_font(f, '', 10)
-                pdf.cell(60, 7, clean_text(f" {r_lbl}"), fill=fill)
-                pdf.set_font(f, 'B' if r_val else '', 10)
-                pdf.cell(30, 7, clean_text(r_val), align='R', fill=fill, ln=True)
-
-            pdf.set_fill_color(249, 232, 223) 
-            pdf.set_font(f, 'B', 10)
-            pdf.cell(65, 7, clean_text(" Totale autokosten"), fill=True)
-            pdf.cell(30, 7, clean_text(f"EUR {fmt(tot_k)}"), align='R', fill=True)
-            pdf.cell(5, 7, "")
-            pdf.cell(90, 7, "", fill=True, ln=True)
-
-            lbl_bijt = " Bijtelling (gemaximeerd afgetopt)" if is_gemaximeerd else (" Bijtelling (< 500km)" if is_minder_dan_500 else " Bijtelling")
-            pdf.set_text_color(232, 78, 15) 
-            pdf.cell(65, 7, clean_text(lbl_bijt), fill=True)
-            pdf.cell(30, 7, clean_text(f"- EUR {fmt(bijt_definitief)}"), align='R', fill=True)
-            pdf.cell(5, 7, "")
-            pdf.cell(90, 7, "", fill=True, ln=True)
-
-            pdf.set_fill_color(0, 49, 92)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font(f, 'B', 11)
-            pdf.cell(65, 10, clean_text(" TOTALE FISCALE AFTREKPOST"), fill=True)
-            pdf.cell(30, 10, clean_text(f"EUR {fmt(zak_aftrek)}"), align='R', fill=True)
-            pdf.cell(5, 10, "")
-            pdf.cell(60, 10, clean_text(" TOTALE FISCALE AFTREKPOST"), fill=True)
-            pdf.cell(30, 10, clean_text(f"EUR {fmt(pri_aftrek)}"), align='R', fill=True, ln=True)
-
-            pdf.ln(12)
-
-            pdf.set_fill_color(232, 78, 15) 
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font(f, 'B', 13)
-            pdf.cell(190, 14, clean_text(f"  CONCLUSIE: Vanuit fiscaal oogpunt is {advies.upper()}"), fill=True, ln=True, align='C')
-            
-            pdf.ln(8)
-
-            pdf.set_text_color(0, 49, 92)
-            pdf.set_font(f, 'B', 10)
-            pdf.cell(0, 5, clean_text("Belangrijke aandachtspunten bij dit advies:"), ln=True)
-            pdf.set_text_color(80, 80, 80) 
-            pdf.set_font(f, '', 8)
-            
             punten = [
                 "- De getoonde berekening is een indicatie op basis van uw eigen opgave en algemene aannames. De werkelijke cijfers kunnen hiervan afwijken.",
                 "- Wegenbelasting is berekend op basis van de actuele Belastingdienst tarieven.", 
@@ -689,9 +574,137 @@ if kenteken_input:
                 punten.insert(0, "- LET OP: De berekende bijtelling was hoger dan de totale kosten. U hoeft fiscaal niet meer bij te tellen dan uw werkelijke kosten. Uw bijtelling is daarom afgetopt.")
             if is_btw_klant:
                 punten.insert(0, "- LET OP: De berekende btw-correctie is gebaseerd op het forfait. Deze kan in de praktijk afwijken (bijv. als er aantoonbare privé kilometers zijn, of indien het bedrag hoger uitvalt dan de in dat jaar afgetrokken btw).")
+
+            # --- 2. DYNAMISCHE LAYOUT BEREKENING (1-Pager Garantie) ---
+            is_heavy = (max_len > 6) or (len(punten) > 4)
+            
+            gap_large = 6 if is_heavy else 12
+            gap_med = 4 if is_heavy else 8
+            tbl_row = 5.5 if is_heavy else 7
+            tot_row = 6 if is_heavy else 7
+            aft_row = 8 if is_heavy else 10
+            ban_h = 12 if is_heavy else 14
+            disclaimer_h = 3.5 if is_heavy else 4
+            
+            # --- 3. PDF GENERATIE ---
+            pdf = VVAAPDF()
+            pdf.set_auto_page_break(auto=True, margin=15) 
+            pdf.add_page()
+            f = pdf.font_fam
+            
+            pdf.set_y(35)
+            pdf.set_fill_color(249, 232, 223) 
+            pdf.rect(10, 35, 190, 40, 'F') 
+            
+            pdf.set_xy(15, 38) 
+            pdf.set_font(f, 'B', 12)
+            pdf.set_text_color(0, 49, 92)
+            pdf.cell(90, 6, clean_text("1. Relatiegegevens"), ln=False)
+            pdf.cell(90, 6, clean_text("2. Voertuigspecificaties"), ln=True)
+            
+            pdf.set_font(f, '', 10)
+            pdf.set_text_color(0, 0, 0)
+            
+            pdf.set_y(45) 
+            for row in data_rows:
+                pdf.set_x(15)
+                pdf.set_font(f, 'B', 10); pdf.cell(25, 4.5, clean_text(row[0][0]))
+                pdf.set_font(f, '', 10); pdf.cell(65, 4.5, clean_text(row[0][1]))
+                pdf.set_font(f, 'B', 10); pdf.cell(35, 4.5, clean_text(row[1][0]))
+                pdf.set_font(f, '', 10); pdf.cell(50, 4.5, clean_text(row[1][1]), ln=True)
+
+            pdf.ln(gap_large)
+
+            pdf.set_font(f, 'B', 12)
+            pdf.set_text_color(0, 49, 92)
+            pdf.cell(0, 6, clean_text("3. Uitgangspunten voor berekening"), ln=True)
+            pdf.set_draw_color(0, 49, 92)
+            pdf.set_line_width(0.3)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+            pdf.ln(2 if is_heavy else 3)
+
+            pdf.set_font(f, '', 10)
+            pdf.set_text_color(0, 0, 0)
+            
+            for k in keuzes:
+                pdf.cell(5, 4.5, "-")
+                pdf.cell(0, 4.5, clean_text(k), ln=True)
+
+            pdf.ln(gap_med)
+
+            pdf.set_font(f, 'B', 12)
+            pdf.set_text_color(0, 49, 92)
+            pdf.cell(0, 6, clean_text("4. Financiële Vergelijking (Per Jaar)"), ln=True)
+
+            pdf.set_fill_color(0, 49, 92) 
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font(f, 'B', 10)
+            hdr_row = 7 if is_heavy else 8
+            pdf.cell(95, hdr_row, clean_text("  AUTO ZAKELIJK"), fill=True, align='L')
+            pdf.cell(5, hdr_row, "") 
+            pdf.cell(90, hdr_row, clean_text("  AUTO PRIVÉ"), fill=True, align='L', ln=True)
+
+            pdf.set_text_color(0, 0, 0)
+            
+            for i in range(max_len):
+                l_lbl, l_val = left_items[i] if i < len(left_items) else ("", "")
+                r_lbl, r_val = right_items[i] if i < len(right_items) else ("", "")
+
+                fill = True if i % 2 == 0 else False
+                pdf.set_fill_color(244, 246, 248) 
+
+                pdf.set_font(f, '', 10)
+                pdf.cell(65, tbl_row, clean_text(f" {l_lbl}"), fill=fill)
+                pdf.set_font(f, 'B' if l_val else '', 10)
+                pdf.cell(30, tbl_row, clean_text(l_val), align='R', fill=fill)
                 
+                pdf.cell(5, tbl_row, "") 
+
+                pdf.set_font(f, '', 10)
+                pdf.cell(60, tbl_row, clean_text(f" {r_lbl}"), fill=fill)
+                pdf.set_font(f, 'B' if r_val else '', 10)
+                pdf.cell(30, tbl_row, clean_text(r_val), align='R', fill=fill, ln=True)
+
+            pdf.set_fill_color(249, 232, 223) 
+            pdf.set_font(f, 'B', 10)
+            pdf.cell(65, tot_row, clean_text(" Totale autokosten"), fill=True)
+            pdf.cell(30, tot_row, clean_text(f"EUR {fmt(tot_k)}"), align='R', fill=True)
+            pdf.cell(5, tot_row, "")
+            pdf.cell(90, tot_row, "", fill=True, ln=True)
+
+            lbl_bijt = " Bijtelling (gemaximeerd afgetopt)" if is_gemaximeerd else (" Bijtelling (< 500km)" if is_minder_dan_500 else " Bijtelling")
+            pdf.set_text_color(232, 78, 15) 
+            pdf.cell(65, tot_row, clean_text(lbl_bijt), fill=True)
+            pdf.cell(30, tot_row, clean_text(f"- EUR {fmt(bijt_definitief)}"), align='R', fill=True)
+            pdf.cell(5, tot_row, "")
+            pdf.cell(90, tot_row, "", fill=True, ln=True)
+
+            pdf.set_fill_color(0, 49, 92)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font(f, 'B', 11)
+            pdf.cell(65, aft_row, clean_text(" TOTALE FISCALE AFTREKPOST"), fill=True)
+            pdf.cell(30, aft_row, clean_text(f"EUR {fmt(zak_aftrek)}"), align='R', fill=True)
+            pdf.cell(5, aft_row, "")
+            pdf.cell(60, aft_row, clean_text(" TOTALE FISCALE AFTREKPOST"), fill=True)
+            pdf.cell(30, aft_row, clean_text(f"EUR {fmt(pri_aftrek)}"), align='R', fill=True, ln=True)
+
+            pdf.ln(gap_large)
+
+            pdf.set_fill_color(232, 78, 15) 
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font(f, 'B', 13)
+            pdf.cell(190, ban_h, clean_text(f"  CONCLUSIE: Vanuit fiscaal oogpunt is {advies.upper()}"), fill=True, ln=True, align='C')
+            
+            pdf.ln(gap_med)
+
+            pdf.set_text_color(0, 49, 92)
+            pdf.set_font(f, 'B', 10)
+            pdf.cell(0, 5, clean_text("Belangrijke aandachtspunten bij dit advies:"), ln=True)
+            pdf.set_text_color(80, 80, 80) 
+            pdf.set_font(f, '', 8)
+            
             for p in punten: 
-                pdf.multi_cell(0, 4, clean_text(p))
+                pdf.multi_cell(0, disclaimer_h, clean_text(p))
 
             fname = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
             st.download_button("📄 Fiscaal Rapport Downloaden (.PDF)", data=pdf.output(dest='S').encode('latin-1'), file_name=fname)
