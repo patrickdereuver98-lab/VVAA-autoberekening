@@ -335,7 +335,6 @@ if kenteken_input:
                 # --- NIEUW: BTW CORRECTIE VELD ---
                 if is_btw_klant:
                     calc_btw_corr = 0.0
-                    # Als <500km privé gereden wordt, is er aantoonbaar (vrijwel) geen privégebruik, dus valt het forfait naar 0
                     if not is_minder_dan_500:
                         calc_btw_corr = auto['catalogusprijs'] * (0.015 if btw_marge else 0.027)
                     btw_correctie = st.number_input("Btw-correctie privégebruik (€)", value=float(round(calc_btw_corr)))
@@ -414,7 +413,6 @@ if kenteken_input:
                     rente_kosten = st.number_input("Rentekosten lening per jaar (€)", value=0.0)
 
         afschr = round((aanschaf * 0.8) * 0.2)
-        # Btw-correctie toegevoegd aan de totale kosten
         tot_k = round(brandstof_kosten + laad_kosten + mrb + onderhoud + verzekering + overige + afschr + lease_kosten + rente_kosten + btw_correctie)
         
         is_gemaximeerd = bijt_bruto > tot_k and not is_minder_dan_500
@@ -444,7 +442,6 @@ if kenteken_input:
             sim_b = 0.0 if is_minder_dan_500 else min(bijt_bruto, sim_k)
             return (sim_k - sim_b) - (z * 0.23)
             
-        # Alleen berekenen als Zakelijk momenteel NIET de winnaar is
         if advies == "Privé voordeliger":
             sign_0 = sim_verschil(0) > 0 
             for test_z in range(100, 150001, 100): 
@@ -461,43 +458,76 @@ if kenteken_input:
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
+            # --- NIEUW: PROMINENTE CONCLUSIE BANNER ---
+            st.markdown(f"""
+            <div style="background-color: {VVAA_ORANJE}; color: white; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(232, 78, 15, 0.2);">
+                <span style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Conclusie Fiscaal Advies</span><br>
+                <h2 style="color: white !important; margin: 10px 0 0 0; font-size: 2.2rem; font-weight: bold;">{advies.upper()}</h2>
+            </div>
+            """, unsafe_allow_html=True)
+            
             if is_gemaximeerd:
                 st.warning(f"**Let op: Bijtelling gemaximeerd.** Uw berekende bijtelling (€ {fmt(bijt_bruto)}) is hoger dan de totale werkelijke autokosten (€ {fmt(tot_k)}). U hoeft niet meer bij te tellen dan uw autokosten. Uw bijtelling is afgetopt op € {fmt(bijt_definitief)}.")
                 
-            st.success(f"**Conclusie:** Vanuit fiscaal oogpunt is de optie **{advies}**.")
-            
-            # --- OMSLAGPUNT WEERGAVE ---
             if advies == "Privé voordeliger" and omslagpunt:
                 st.info(f"⚖️ **Tip van de adviseur:** Zakelijk rijden wordt in deze situatie pas voordeliger bij **{richting} dan {fmt(omslagpunt)} zakelijke kilometers** per jaar.")
             
-            html_result = f"""<div style='display: flex; gap: 20px; margin-top: 20px; margin-bottom: 20px; flex-wrap: wrap;'>
-<div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
+            # --- NIEUW: DYNAMISCHE HTML LIJST VOOR DE ZAKELIJKE KOSTEN ---
+            zak_lijst = [
+                ("Brandstof / Laadkosten", brandstof_kosten + laad_kosten),
+                ("Wegenbelasting", mrb),
+                ("Onderhoud", onderhoud),
+                ("Verzekering", verzekering),
+                ("Overige autokosten", overige),
+                ("Afschrijving", afschr)
+            ]
+            if is_geleased:
+                zak_lijst.append(("Leasekosten", lease_kosten))
+                zak_lijst.append(("Rentekosten", rente_kosten))
+            if is_btw_klant:
+                zak_lijst.append(("Btw-correctie privégebruik", btw_correctie))
+                
+            zak_html = ""
+            for lbl, val in zak_lijst:
+                zak_html += f"<div style='display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #F0F4F8;'><span>{lbl}</span><span>€ {fmt(val)}</span></div>"
+            
+            html_result = f"""<div style='display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;'>
+<div style='flex: 1; min-width: 300px; display: flex; flex-direction: column; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
 <h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; border: none; padding-top: 0;'><span style='font-size:1.2em;'>🏢</span> Auto Zakelijk</h4>
-<div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 10px;'>
-<span style='color: #4A5568;'>Totale kosten per jaar</span>
+
+<div style='font-size: 0.95em; color: #4A5568; margin-bottom: 15px;'>
+{zak_html}
+</div>
+
+<div style='display: flex; justify-content: space-between; border-top: 2px solid #F0F4F8; padding-top: 10px; margin-bottom: 10px;'>
+<span style='color: #4A5568; font-weight: bold;'>Totale autokosten per jaar</span>
 <strong style='color: {VVAA_BLAUW};'>€ {fmt(tot_k)}</strong>
 </div>
-<div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 20px;'>
-<span style='color: #4A5568;'>Bijtelling {"(afgetopt)" if is_gemaximeerd else ("(< 500km)" if is_minder_dan_500 else "")}</span>
-<strong style='color: {VVAA_BLAUW};'>- € {fmt(bijt_definitief)}</strong>
+<div style='display: flex; justify-content: space-between; padding-bottom: 15px; margin-bottom: 20px;'>
+<span style='color: {VVAA_ORANJE}; font-weight: bold;'>Bijtelling {"(afgetopt)" if is_gemaximeerd else ("(< 500km)" if is_minder_dan_500 else "")}</span>
+<strong style='color: {VVAA_ORANJE};'>- € {fmt(bijt_definitief)}</strong>
 </div>
-<div style='text-align: center; background: {VVAA_LICHTORANJE}; padding: 20px; border-radius: 8px; border: 1px solid #F0D5C9;'>
+
+<div style='text-align: center; background: {VVAA_LICHTORANJE}; padding: 20px; border-radius: 8px; border: 1px solid #F0D5C9; margin-top: auto;'>
 <span style='color: {VVAA_BLAUW}; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;'>Fiscale Aftrekpost</span>
 <h2 style='color: {VVAA_ORANJE}; margin: 8px 0 0 0; font-size: 2.2rem;'>€ {fmt(zak_aftrek)}</h2>
 </div>
 </div>
 
-<div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
+<div style='flex: 1; min-width: 300px; display: flex; flex-direction: column; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
 <h4 style='color: {VVAA_BLAUW}; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; border: none; padding-top: 0;'><span style='font-size:1.2em;'>🏠</span> Auto Privé</h4>
-<div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 10px;'>
-<span style='color: #4A5568;'>Vergoeding per km</span>
-<strong style='color: {VVAA_BLAUW};'>€ 0,23</strong>
+
+<div style='font-size: 0.95em; color: #4A5568; margin-bottom: 15px;'>
+    <div style='display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #F0F4F8;'><span>Vergoeding per zakelijke km</span><span>€ 0,23</span></div>
+    <div style='display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #F0F4F8;'><span>Aantal zakelijke km</span><span>{fmt(z_km)}</span></div>
 </div>
-<div style='display: flex; justify-content: space-between; border-bottom: 1px solid #F0F4F8; padding-bottom: 10px; margin-bottom: 20px;'>
-<span style='color: #4A5568;'>Aantal zakelijke km</span>
-<strong style='color: {VVAA_BLAUW};'>{fmt(z_km)}</strong>
+
+<div style='display: flex; justify-content: space-between; border-top: 2px solid #F0F4F8; padding-top: 10px; margin-bottom: 20px; padding-bottom: 15px;'>
+<span style='color: #4A5568; font-weight: bold;'>Totale vergoeding (Aftrekpost)</span>
+<strong style='color: {VVAA_BLAUW};'>€ {fmt(pri_aftrek)}</strong>
 </div>
-<div style='text-align: center; background: {VVAA_LICHTORANJE}; padding: 20px; border-radius: 8px; border: 1px solid #F0D5C9;'>
+
+<div style='text-align: center; background: {VVAA_LICHTORANJE}; padding: 20px; border-radius: 8px; border: 1px solid #F0D5C9; margin-top: auto;'>
 <span style='color: {VVAA_BLAUW}; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;'>Fiscale Aftrekpost</span>
 <h2 style='color: {VVAA_ORANJE}; margin: 8px 0 0 0; font-size: 2.2rem;'>€ {fmt(pri_aftrek)}</h2>
 </div>
@@ -634,7 +664,6 @@ if kenteken_input:
             if is_geleased:
                 left_items.append(("Leasekosten", f"EUR {fmt(lease_kosten)}"))
                 left_items.append(("Rentekosten", f"EUR {fmt(rente_kosten)}"))
-            # Btw toevoegen aan PDF lijst als het geselecteerd is
             if is_btw_klant:
                 left_items.append(("Btw-correctie privégebruik", f"EUR {fmt(btw_correctie)}"))
 
@@ -721,13 +750,12 @@ if kenteken_input:
             fname = f"VvAA_autoberekening_{klant_naam.replace(' ', '_')}_{klant_nummer}.pdf"
             st.download_button("📄 Fiscaal Rapport Downloaden (.PDF)", data=pdf.output(dest='S').encode('latin-1'), file_name=fname)
 
-            # --- NIEUW: MAGIC EMAIL GENERATOR ---
+            # --- MAGIC EMAIL GENERATOR ---
             st.markdown("---")
             st.markdown("### ✉️ Concept E-mail naar klant")
             
             voornaam = klant_naam.split(' ')[0] if klant_naam else "klant"
             
-            # --- UITGEBREIDERE EMAIL TEKST ---
             email_text = f"""Beste {voornaam},
 
 Hierbij ontvang je de aangevraagde autoberekening voor de {auto['merk'].title()} {auto['handelsbenaming'].title()}. 
@@ -742,7 +770,6 @@ Mocht je nog vragen hebben of de berekening willen aanpassen met andere kilomete
             
             st.caption("Gebruik het handige **kopieer-icoontje rechtsbovenin het blok** hieronder om de hele tekst in één keer te kopiëren voor in je Outlook e-mail.")
             
-            # --- STREAMLIT COPY BUTTON TRUC ---
             st.code(email_text, language="text")
             
         else:
