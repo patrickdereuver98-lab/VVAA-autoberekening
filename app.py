@@ -385,7 +385,7 @@ if kenteken_input:
                 st.markdown("#### Vaste Kosten")
                 
                 with st.expander("ℹ️ Uitleg Kosten Schatting"):
-                    st.write("- **Wegenbelasting:** Automatisch berekend o.b.v. RDW data en provincie.\n- **Onderhoud (schatting):** Berekent € 0,04 per gereden km.\n- **Overig (schatting):** Vaste aanname € 250,- per jaar.")
+                    st.write("- **Wegenbelasting:** Automatisch berekend o.b.v. RDW data en provincie.\n- **Onderhoud (schatting):** Berekent € 0,04 per gereden km.\n- **Overig (schatting):** Vaste aanname € 250,- per jaar.\n- **Afschrijving:** Standaard berekend als afschrijving in 5 jaar met een restwaarde van 20% van de aanschafwaarde (handmatig aan te passen).")
                 
                 gebruik_schatting = st.checkbox("🧮 Vaste kosten schatting toepassen?", value=False)
                 
@@ -397,7 +397,6 @@ if kenteken_input:
                 verzekering = st.number_input("Verzekering per jaar (€)", value=0.0)
                 overige = st.number_input("Overige kosten per jaar (€)", value=250.0 if gebruik_schatting else 0.0)
                 
-                # --- NIEUW: HANDMATIGE AFSCHRIJVING VELD ---
                 calc_afschr = round((aanschaf * 0.8) * 0.2)
                 afschr = st.number_input("Afschrijving per jaar (€)", value=float(calc_afschr))
                 
@@ -581,7 +580,6 @@ if kenteken_input:
             if is_btw_klant:
                 punten.insert(0, "- LET OP: De berekende btw-correctie is gebaseerd op het forfait. Deze kan in de praktijk afwijken (bijv. als er aantoonbare privé kilometers zijn, of indien het bedrag hoger uitvalt dan de in dat jaar afgetrokken btw).")
 
-            # DYNAMISCHE LAYOUT BEREKENING (1-Pager Garantie)
             is_heavy = (max_len > 6) or (len(punten) > 4)
             
             gap_large = 6 if is_heavy else 10
@@ -592,7 +590,6 @@ if kenteken_input:
             ban_h = 10 if is_heavy else 12
             disclaimer_h = 3.5 if is_heavy else 4
             
-            # --- PDF GENERATIE ---
             pdf = VVAAPDF()
             pdf.set_auto_page_break(auto=True, margin=15) 
             pdf.add_page()
@@ -766,7 +763,6 @@ Mocht je nog vragen hebben of de berekening willen aanpassen met andere kilomete
             
             st.code(email_text, language="text")
             
-            # --- NIEUW: DIRECT OPENEN IN OUTLOOK KNOP ---
             subject = f"Autoberekening voor de {auto['merk'].title()} {auto['handelsbenaming'].title()}"
             mailto_url = f"mailto:?subject={urllib.parse.quote(subject)}&body={urllib.parse.quote(email_text)}"
             
