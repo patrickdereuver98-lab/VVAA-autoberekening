@@ -75,6 +75,11 @@ class VVAAPDF(FPDF):
             self.font_fam = "Arial"
 
     def header(self):
+        # Zeer zachte, chique VvAA-zandkleur als pagina achtergrond
+        self.set_fill_color(252, 246, 241) 
+        self.rect(0, 0, 210, 297, 'F')
+        
+        # Oranje accentlijn bovenin
         self.set_fill_color(232, 78, 15)
         self.rect(0, 0, 210, 4, 'F')
         
@@ -522,7 +527,6 @@ if kenteken_input:
             st.markdown(html_result, unsafe_allow_html=True)
 
         if gevalideerd:
-            # --- 1. DATA PREPARATIE VOOR PDF ---
             data_rows = [
                 [("Relatie:", klant_naam), ("Merk & Type:", f"{auto['merk']} {auto['handelsbenaming']}")],
                 [("Lidnummer:", klant_nummer), ("Kenteken:", kenteken_input)],
@@ -575,26 +579,28 @@ if kenteken_input:
             if is_btw_klant:
                 punten.insert(0, "- LET OP: De berekende btw-correctie is gebaseerd op het forfait. Deze kan in de praktijk afwijken (bijv. als er aantoonbare privé kilometers zijn, of indien het bedrag hoger uitvalt dan de in dat jaar afgetrokken btw).")
 
-            # --- 2. DYNAMISCHE LAYOUT BEREKENING (1-Pager Garantie) ---
+            # DYNAMISCHE LAYOUT BEREKENING (1-Pager Garantie)
             is_heavy = (max_len > 6) or (len(punten) > 4)
             
-            gap_large = 6 if is_heavy else 12
-            gap_med = 4 if is_heavy else 8
-            tbl_row = 5.5 if is_heavy else 7
+            gap_large = 6 if is_heavy else 10
+            gap_med = 4 if is_heavy else 6
+            tbl_row = 5.5 if is_heavy else 6.5
             tot_row = 6 if is_heavy else 7
-            aft_row = 8 if is_heavy else 10
-            ban_h = 12 if is_heavy else 14
+            aft_row = 8 if is_heavy else 9
+            ban_h = 10 if is_heavy else 12
             disclaimer_h = 3.5 if is_heavy else 4
             
-            # --- 3. PDF GENERATIE ---
+            # --- NIEUWE VORMGEVING PDF ---
             pdf = VVAAPDF()
             pdf.set_auto_page_break(auto=True, margin=15) 
             pdf.add_page()
             f = pdf.font_fam
             
+            # Witte 'Card' voor Relatiegegevens
             pdf.set_y(35)
-            pdf.set_fill_color(249, 232, 223) 
-            pdf.rect(10, 35, 190, 40, 'F') 
+            pdf.set_fill_color(255, 255, 255) 
+            pdf.set_draw_color(255, 255, 255)
+            pdf.rect(10, 35, 190, 42, 'DF') 
             
             pdf.set_xy(15, 38) 
             pdf.set_font(f, 'B', 12)
@@ -618,7 +624,9 @@ if kenteken_input:
             pdf.set_font(f, 'B', 12)
             pdf.set_text_color(0, 49, 92)
             pdf.cell(0, 6, clean_text("3. Uitgangspunten voor berekening"), ln=True)
-            pdf.set_draw_color(0, 49, 92)
+            
+            # Subtiele lijn i.p.v. zware blokken
+            pdf.set_draw_color(200, 210, 220)
             pdf.set_line_width(0.3)
             pdf.line(10, pdf.get_y(), 200, pdf.get_y())
             pdf.ln(2 if is_heavy else 3)
@@ -632,68 +640,100 @@ if kenteken_input:
 
             pdf.ln(gap_med)
 
-            pdf.set_font(f, 'B', 12)
+            pdf.set_font(f, 'B', 14)
             pdf.set_text_color(0, 49, 92)
-            pdf.cell(0, 6, clean_text("4. Financiële Vergelijking (Per Jaar)"), ln=True)
+            pdf.cell(0, 8, clean_text("4. Financiële Vergelijking (Per Jaar)"), ln=True)
 
-            pdf.set_fill_color(0, 49, 92) 
-            pdf.set_text_color(255, 255, 255)
+            # Luchtige, moderne tabelkoppen
             pdf.set_font(f, 'B', 10)
-            hdr_row = 7 if is_heavy else 8
-            pdf.cell(95, hdr_row, clean_text("  AUTO ZAKELIJK"), fill=True, align='L')
-            pdf.cell(5, hdr_row, "") 
-            pdf.cell(90, hdr_row, clean_text("  AUTO PRIVÉ"), fill=True, align='L', ln=True)
+            pdf.set_text_color(232, 78, 15)
+            
+            y_line = pdf.get_y() + (7 if is_heavy else 8)
+            pdf.set_draw_color(232, 78, 15)
+            pdf.set_line_width(0.5)
+            pdf.line(10, y_line, 100, y_line) 
+            pdf.line(110, y_line, 200, y_line) 
+            
+            pdf.cell(90, (7 if is_heavy else 8), clean_text(" AUTO ZAKELIJK"), align='L')
+            pdf.cell(10, (7 if is_heavy else 8), "") 
+            pdf.cell(90, (7 if is_heavy else 8), clean_text(" AUTO PRIVÉ"), align='L', ln=True)
 
-            pdf.set_text_color(0, 0, 0)
+            pdf.set_text_color(0, 49, 92)
             
             for i in range(max_len):
                 l_lbl, l_val = left_items[i] if i < len(left_items) else ("", "")
                 r_lbl, r_val = right_items[i] if i < len(right_items) else ("", "")
 
+                # Zebra patroon met de zachte achtergrondkleur vs wit
                 fill = True if i % 2 == 0 else False
-                pdf.set_fill_color(244, 246, 248) 
+                pdf.set_fill_color(255, 255, 255) 
 
                 pdf.set_font(f, '', 10)
-                pdf.cell(65, tbl_row, clean_text(f" {l_lbl}"), fill=fill)
+                pdf.cell(60, tbl_row, clean_text(f" {l_lbl}"), fill=fill)
                 pdf.set_font(f, 'B' if l_val else '', 10)
                 pdf.cell(30, tbl_row, clean_text(l_val), align='R', fill=fill)
                 
-                pdf.cell(5, tbl_row, "") 
+                pdf.cell(10, tbl_row, "", fill=False) 
 
                 pdf.set_font(f, '', 10)
                 pdf.cell(60, tbl_row, clean_text(f" {r_lbl}"), fill=fill)
                 pdf.set_font(f, 'B' if r_val else '', 10)
                 pdf.cell(30, tbl_row, clean_text(r_val), align='R', fill=fill, ln=True)
 
-            pdf.set_fill_color(249, 232, 223) 
+            # Subtiele lijn boven totalen
+            pdf.set_draw_color(0, 49, 92)
+            pdf.set_line_width(0.2)
+            y_line = pdf.get_y()
+            pdf.line(10, y_line, 100, y_line) 
+            
+            pdf.set_fill_color(255, 255, 255) 
             pdf.set_font(f, 'B', 10)
-            pdf.cell(65, tot_row, clean_text(" Totale autokosten"), fill=True)
-            pdf.cell(30, tot_row, clean_text(f"EUR {fmt(tot_k)}"), align='R', fill=True)
-            pdf.cell(5, tot_row, "")
-            pdf.cell(90, tot_row, "", fill=True, ln=True)
+            pdf.cell(60, tot_row, clean_text(" Totale autokosten"), fill=False)
+            pdf.cell(30, tot_row, clean_text(f"EUR {fmt(tot_k)}"), align='R', fill=False)
+            pdf.cell(10, tot_row, "")
+            pdf.cell(90, tot_row, "", fill=False, ln=True)
 
-            lbl_bijt = " Bijtelling (gemaximeerd afgetopt)" if is_gemaximeerd else (" Bijtelling (< 500km)" if is_minder_dan_500 else " Bijtelling")
+            lbl_bijt = " Bijtelling (gemaximeerd)" if is_gemaximeerd else (" Bijtelling (< 500km)" if is_minder_dan_500 else " Bijtelling")
             pdf.set_text_color(232, 78, 15) 
-            pdf.cell(65, tot_row, clean_text(lbl_bijt), fill=True)
-            pdf.cell(30, tot_row, clean_text(f"- EUR {fmt(bijt_definitief)}"), align='R', fill=True)
-            pdf.cell(5, tot_row, "")
-            pdf.cell(90, tot_row, "", fill=True, ln=True)
+            pdf.cell(60, tot_row, clean_text(lbl_bijt), fill=False)
+            pdf.cell(30, tot_row, clean_text(f"- EUR {fmt(bijt_definitief)}"), align='R', fill=False)
+            pdf.cell(10, tot_row, "")
+            pdf.cell(90, tot_row, "", fill=False, ln=True)
 
-            pdf.set_fill_color(0, 49, 92)
-            pdf.set_text_color(255, 255, 255)
+            # Eindconclusie getallen
+            y_line = pdf.get_y()
+            pdf.set_draw_color(0, 49, 92)
+            pdf.line(10, y_line, 100, y_line)
+            pdf.line(110, y_line, 200, y_line)
+            
+            pdf.set_fill_color(255, 255, 255)
+            pdf.set_text_color(0, 49, 92)
             pdf.set_font(f, 'B', 11)
-            pdf.cell(65, aft_row, clean_text(" TOTALE FISCALE AFTREKPOST"), fill=True)
-            pdf.cell(30, aft_row, clean_text(f"EUR {fmt(zak_aftrek)}"), align='R', fill=True)
-            pdf.cell(5, aft_row, "")
-            pdf.cell(60, aft_row, clean_text(" TOTALE FISCALE AFTREKPOST"), fill=True)
-            pdf.cell(30, aft_row, clean_text(f"EUR {fmt(pri_aftrek)}"), align='R', fill=True, ln=True)
+            pdf.rect(10, y_line, 90, aft_row, 'F')
+            pdf.rect(110, y_line, 90, aft_row, 'F')
+            
+            pdf.set_y(y_line)
+            pdf.cell(60, aft_row, clean_text(" FISCALE AFTREKPOST"), fill=False)
+            pdf.cell(30, aft_row, clean_text(f"EUR {fmt(zak_aftrek)}"), align='R', fill=False)
+            pdf.cell(10, aft_row, "")
+            pdf.cell(60, aft_row, clean_text(" FISCALE AFTREKPOST"), fill=False)
+            pdf.cell(30, aft_row, clean_text(f"EUR {fmt(pri_aftrek)}"), align='R', fill=False, ln=True)
 
             pdf.ln(gap_large)
 
-            pdf.set_fill_color(232, 78, 15) 
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font(f, 'B', 13)
-            pdf.cell(190, ban_h, clean_text(f"  CONCLUSIE: Vanuit fiscaal oogpunt is {advies.upper()}"), fill=True, ln=True, align='C')
+            # Chique "White Box" met Oranje zijlijn voor het eindadvies
+            y_conclusie = pdf.get_y()
+            pdf.set_fill_color(255, 255, 255)
+            pdf.rect(10, y_conclusie, 190, ban_h, 'F')
+            pdf.set_fill_color(232, 78, 15)
+            pdf.rect(10, y_conclusie, 3, ban_h, 'F') 
+            
+            pdf.set_y(y_conclusie + (ban_h/2) - 3)
+            pdf.set_font(f, 'B', 12)
+            pdf.set_text_color(0, 49, 92)
+            pdf.cell(4, 6, "")
+            pdf.cell(180, 6, clean_text(f"Conclusie: Vanuit fiscaal oogpunt is {advies.lower()}."), ln=True, align='L')
+            pdf.set_y(y_conclusie + ban_h)
             
             pdf.ln(gap_med)
 
