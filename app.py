@@ -89,6 +89,21 @@ vvaa_css = f"""
     }}
     div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
     div[data-testid="stAlert"] svg {{ fill: {VVAA_BLAUW} !important; }}
+
+    /* --- 7. EMAIL CODE BLOCK FIX (Arial 10pt) --- */
+    [data-testid="stCodeBlock"] {
+        background-color: transparent !important;
+    }
+    [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code {
+        font-family: 'Arial', sans-serif !important;
+        font-size: 10pt !important;
+        white-space: pre-wrap !important;
+        color: #00315C !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #E0E6ED;
+        border-radius: 6px;
+        padding: 15px;
+    }
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
@@ -265,6 +280,13 @@ if kenteken_input:
                 is_minder_dan_500 = st.checkbox("Wordt er minder dan 500 km per jaar privé gereden?", value=False)
                 is_geleased = st.checkbox("Wordt de auto geleased of gefinancierd?", value=False)
                 
+                # --- NIEUW: BTW MODULE ---
+                is_btw_klant = st.checkbox("Ondernemer voor de btw?", value=False)
+                if is_btw_klant:
+                    btw_marge = st.checkbox("↳ Marge-auto of >4 jaar in gebruik? (1,5% btw-forfait)", value=False)
+                else:
+                    btw_marge = False
+                
             with top3:
                 st.markdown("#### Meldingen")
                 if is_minder_dan_500:
@@ -277,6 +299,8 @@ if kenteken_input:
                     st.info(f"💡 Tip: Dit voertuig is ouder dan 15 jaar. De youngtimer-regeling is waarschijnlijk voordeliger.")
                 if is_vervallen_ev and not is_young_manual:
                     st.info(f"⚡ Let op: De 60-maandenregel voor deze EV is verlopen. De regels van peiljaar {peil_jaar} zijn toegepast.")
+                if is_btw_klant:
+                    st.info("ℹ️ **Btw-ondernemer:** Vul de verwachte autokosten hieronder **exclusief btw** in. De btw-correctie voor privégebruik wordt in de linkerkolom automatisch berekend o.b.v. de cataloguswaarde.")
 
             st.markdown("---")
             st.markdown("### 💶 Financiële Specificaties")
@@ -307,6 +331,16 @@ if kenteken_input:
                         calc_bijt = auto['catalogusprijs'] * bijt_perc
                 
                 bijt_bruto = st.number_input("Bijtelling per jaar (€)", value=float(round(calc_bijt)))
+
+                # --- NIEUW: BTW CORRECTIE VELD ---
+                if is_btw_klant:
+                    calc_btw_corr = 0.0
+                    # Als <500km privé gereden wordt, is er aantoonbaar (vrijwel) geen privégebruik, dus valt het forfait naar 0
+                    if not is_minder_dan_500:
+                        calc_btw_corr = auto['catalogusprijs'] * (0.015 if btw_marge else 0.027)
+                    btw_correctie = st.number_input("Btw-correctie privégebruik (€)", value=float(round(calc_btw_corr)))
+                else:
+                    btw_correctie = 0.0
                 
             with col2:
                 st.markdown("#### Verbruik & Brandstof")
@@ -380,7 +414,8 @@ if kenteken_input:
                     rente_kosten = st.number_input("Rentekosten lening per jaar (€)", value=0.0)
 
         afschr = round((aanschaf * 0.8) * 0.2)
-        tot_k = round(brandstof_kosten + laad_kosten + mrb + onderhoud + verzekering + overige + afschr + lease_kosten + rente_kosten)
+        # Btw-correctie toegevoegd aan de totale kosten
+        tot_k = round(brandstof_kosten + laad_kosten + mrb + onderhoud + verzekering + overige + afschr + lease_kosten + rente_kosten + btw_correctie)
         
         is_gemaximeerd = bijt_bruto > tot_k and not is_minder_dan_500
         bijt_definitief = round(min(bijt_bruto, tot_k) if not is_minder_dan_500 else 0.0)
@@ -398,7 +433,7 @@ if kenteken_input:
         if gebruik_schatting:
             var_cost_per_km += 0.04
             
-        vaste_kosten = mrb + (0.0 if gebruik_schatting else onderhoud) + verzekering + overige + afschr + lease_kosten + rente_kosten
+        vaste_kosten = mrb + (0.0 if gebruik_schatting else onderhoud) + verzekering + overige + afschr + lease_kosten + rente_kosten + btw_correctie
         vaste_prive_km_kosten = var_cost_per_km * p_km
         
         omslagpunt = None
@@ -411,7 +446,7 @@ if kenteken_input:
             
         # Alleen berekenen als Zakelijk momenteel NIET de winnaar is
         if advies == "Privé voordeliger":
-            sign_0 = sim_verschil(0) > 0 # Controleer of zakelijk beter is bij 0 km
+            sign_0 = sim_verschil(0) > 0 
             for test_z in range(100, 150001, 100): 
                 if (sim_verschil(test_z) > 0) != sign_0:
                     omslagpunt = test_z
@@ -566,6 +601,7 @@ if kenteken_input:
                 f"Gekozen bijtellingsprofiel: {gekozen_bijt}.",
                 f"Youngtimer regeling toegepast: {'Ja' if is_young_manual else 'Nee'}.",
                 f"Minder dan 500 km privé per jaar: {'Ja (Geen bijtelling berekend)' if is_minder_dan_500 else 'Nee'}.",
+                f"Ondernemer voor de btw: {'Ja (Autokosten exclusief btw)' if is_btw_klant else 'Nee (Autokosten inclusief btw)'}.",
                 f"Voertuig wordt geleased of gefinancierd: {'Ja' if is_geleased else 'Nee'}."
             ]
             for k in keuzes:
@@ -596,8 +632,11 @@ if kenteken_input:
                 ("Afschrijving", f"EUR {fmt(afschr)}")
             ]
             if is_geleased:
-                left_items.insert(-1, ("Leasekosten", f"EUR {fmt(lease_kosten)}"))
-                left_items.insert(-1, ("Rentekosten", f"EUR {fmt(rente_kosten)}"))
+                left_items.append(("Leasekosten", f"EUR {fmt(lease_kosten)}"))
+                left_items.append(("Rentekosten", f"EUR {fmt(rente_kosten)}"))
+            # Btw toevoegen aan PDF lijst als het geselecteerd is
+            if is_btw_klant:
+                left_items.append(("Btw-correctie privégebruik", f"EUR {fmt(btw_correctie)}"))
 
             right_items = [
                 ("Vergoeding per zakelijke km", "EUR 0,23"),
@@ -673,6 +712,8 @@ if kenteken_input:
                 punten.insert(0, "- LET OP: Voor 0% bijtelling is een sluitende rittenadministratie of 'Verklaring geen privégebruik auto' vereist.")
             if is_gemaximeerd:
                 punten.insert(0, "- LET OP: De berekende bijtelling was hoger dan de totale kosten. U hoeft fiscaal niet meer bij te tellen dan uw werkelijke kosten. Uw bijtelling is daarom afgetopt.")
+            if is_btw_klant:
+                punten.insert(0, "- LET OP: De berekende btw-correctie is gebaseerd op het forfait. Deze kan in de praktijk afwijken (bijv. als er aantoonbare privé kilometers zijn, of indien het bedrag hoger uitvalt dan de in dat jaar afgetrokken btw).")
                 
             for p in punten: 
                 pdf.multi_cell(0, 4, clean(p))
@@ -699,7 +740,7 @@ In de bijlage vind je het uitgebreide rapport met de exacte kostenopbouw, de gem
 
 Mocht je nog vragen hebben of de berekening willen aanpassen met andere kilometers of bedragen, laat het ons dan gerust weten!"""
             
-            st.caption("Gebruik het handige **kopieer-icoontje rechtsbovenin het blok** hieronder om de hele tekst in één keer te kopiëren voor in je e-mail.")
+            st.caption("Gebruik het handige **kopieer-icoontje rechtsbovenin het blok** hieronder om de hele tekst in één keer te kopiëren voor in je Outlook e-mail.")
             
             # --- STREAMLIT COPY BUTTON TRUC ---
             st.code(email_text, language="text")
