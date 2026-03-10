@@ -91,10 +91,10 @@ vvaa_css = f"""
     div[data-testid="stAlert"] svg {{ fill: {VVAA_BLAUW} !important; }}
 
     /* --- 7. EMAIL CODE BLOCK FIX (Arial 10pt) --- */
-    [data-testid="stCodeBlock"] {
+    [data-testid="stCodeBlock"] {{
         background-color: transparent !important;
-    }
-    [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code {
+    }}
+    [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code {{
         font-family: 'Arial', sans-serif !important;
         font-size: 10pt !important;
         white-space: pre-wrap !important;
@@ -103,7 +103,7 @@ vvaa_css = f"""
         border: 1px solid #E0E6ED;
         border-radius: 6px;
         padding: 15px;
-    }
+    }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
