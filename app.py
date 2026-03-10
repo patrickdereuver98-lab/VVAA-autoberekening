@@ -109,11 +109,9 @@ class VVAAPDF(FPDF):
 
 # --- 4. DATA OPSLAG & APIS ---
 
-# --- NIEUW: FAIL-SAFE FISCALE REGELS INLADEN ---
-@st.cache_data
+# --- FAIL-SAFE FISCALE REGELS INLADEN ---
+# Let op: de @st.cache_data tag is hier verwijderd zodat hij ALTIJD kijkt naar wijzigingen in CSV.
 def load_fiscale_regels():
-    # Dit is de 100% veilige terugval-basis. Als er geen extern bestand is, 
-    # of er gaat iets mis met inladen, gebruikt de tool altijd deze regels.
     regels = {
         "km_vergoeding": 0.23,
         "btw_forfait_normaal": 0.027,
@@ -123,12 +121,15 @@ def load_fiscale_regels():
         if os.path.exists("fiscale_regels.csv"):
             df_regels = pd.read_csv("fiscale_regels.csv", sep=";")
             for index, row in df_regels.iterrows():
+                # Lege regels in the CSV negeren:
+                if pd.isna(row['Regel']) or pd.isna(row['Waarde']):
+                    continue
                 key = str(row['Regel']).strip()
                 val = float(str(row['Waarde']).replace(',', '.'))
                 if key in regels:
                     regels[key] = val
     except Exception:
-        pass # Geen bestand of een fout? Negeer stilzwijgend en gebruik de defaults.
+        pass 
     return regels
 
 fiscale_regels = load_fiscale_regels()
