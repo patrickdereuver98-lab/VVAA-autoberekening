@@ -413,6 +413,7 @@ if kenteken_input:
                     rente_kosten = st.number_input("Rentekosten lening per jaar (€)", value=0.0)
 
         afschr = round((aanschaf * 0.8) * 0.2)
+        # Btw-correctie toegevoegd aan de totale kosten
         tot_k = round(brandstof_kosten + laad_kosten + mrb + onderhoud + verzekering + overige + afschr + lease_kosten + rente_kosten + btw_correctie)
         
         is_gemaximeerd = bijt_bruto > tot_k and not is_minder_dan_500
@@ -442,6 +443,7 @@ if kenteken_input:
             sim_b = 0.0 if is_minder_dan_500 else min(bijt_bruto, sim_k)
             return (sim_k - sim_b) - (z * 0.23)
             
+        # Alleen berekenen als Zakelijk momenteel NIET de winnaar is
         if advies == "Privé voordeliger":
             sign_0 = sim_verschil(0) > 0 
             for test_z in range(100, 150001, 100): 
@@ -458,11 +460,11 @@ if kenteken_input:
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
             
-            # --- NIEUW: PROMINENTE CONCLUSIE BANNER ---
+            # --- AANGEPASTE CONCLUSIE BANNER (Compacter) ---
             st.markdown(f"""
-            <div style="background-color: {VVAA_ORANJE}; color: white; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(232, 78, 15, 0.2);">
-                <span style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Conclusie Fiscaal Advies</span><br>
-                <h2 style="color: white !important; margin: 10px 0 0 0; font-size: 2.2rem; font-weight: bold;">{advies.upper()}</h2>
+            <div style="background-color: {VVAA_ORANJE}; color: white; padding: 16px; border-radius: 8px; text-align: center; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(232, 78, 15, 0.2);">
+                <span style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">Conclusie Fiscaal Advies</span><br>
+                <div style="color: white !important; margin: 4px 0 0 0; font-size: 1.4rem; font-weight: bold;">{advies.upper()}</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -472,7 +474,7 @@ if kenteken_input:
             if advies == "Privé voordeliger" and omslagpunt:
                 st.info(f"⚖️ **Tip van de adviseur:** Zakelijk rijden wordt in deze situatie pas voordeliger bij **{richting} dan {fmt(omslagpunt)} zakelijke kilometers** per jaar.")
             
-            # --- NIEUW: DYNAMISCHE HTML LIJST VOOR DE ZAKELIJKE KOSTEN ---
+            # --- DYNAMISCHE HTML LIJST VOOR DE ZAKELIJKE KOSTEN ---
             zak_lijst = [
                 ("Brandstof / Laadkosten", brandstof_kosten + laad_kosten),
                 ("Wegenbelasting", mrb),
