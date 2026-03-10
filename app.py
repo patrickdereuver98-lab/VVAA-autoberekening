@@ -17,7 +17,7 @@ VVAA_MELDING_ORANJE = "#FDCEA8"
 
 st.set_page_config(page_title="VvAA Autoberekening", page_icon="🚗", layout="wide")
 
-# CSS is enorm opgeschoond omdat config.toml nu het zware werk doet!
+# --- 2. CSS STYLING ---
 vvaa_css = f"""
 <style>
     /* --- ACHTERGRONDKLEUR HERSTEL --- */
@@ -75,8 +75,8 @@ class VVAAPDF(FPDF):
             self.font_fam = "Arial"
 
     def header(self):
-        # Zeer zachte, chique VvAA-zandkleur als pagina achtergrond
-        self.set_fill_color(252, 246, 241) 
+        # --- AANGEPAST: VvAA Grijs als rustige donkerdere achtergrond ---
+        self.set_fill_color(244, 246, 248) 
         self.rect(0, 0, 210, 297, 'F')
         
         # Oranje accentlijn bovenin
@@ -596,10 +596,10 @@ if kenteken_input:
             pdf.add_page()
             f = pdf.font_fam
             
-            # Witte 'Card' voor Relatiegegevens
+            # VvAA Zand-Oranje 'Card' voor Relatiegegevens
             pdf.set_y(35)
-            pdf.set_fill_color(255, 255, 255) 
-            pdf.set_draw_color(255, 255, 255)
+            pdf.set_fill_color(249, 232, 223) 
+            pdf.set_draw_color(249, 232, 223)
             pdf.rect(10, 35, 190, 42, 'DF') 
             
             pdf.set_xy(15, 38) 
@@ -664,9 +664,9 @@ if kenteken_input:
                 l_lbl, l_val = left_items[i] if i < len(left_items) else ("", "")
                 r_lbl, r_val = right_items[i] if i < len(right_items) else ("", "")
 
-                # Zebra patroon met de zachte achtergrondkleur vs wit
+                # Zebra patroon met Zand-oranje vs Transparant
                 fill = True if i % 2 == 0 else False
-                pdf.set_fill_color(255, 255, 255) 
+                pdf.set_fill_color(249, 232, 223) 
 
                 pdf.set_font(f, '', 10)
                 pdf.cell(60, tbl_row, clean_text(f" {l_lbl}"), fill=fill)
@@ -686,7 +686,7 @@ if kenteken_input:
             y_line = pdf.get_y()
             pdf.line(10, y_line, 100, y_line) 
             
-            pdf.set_fill_color(255, 255, 255) 
+            pdf.set_fill_color(249, 232, 223) 
             pdf.set_font(f, 'B', 10)
             pdf.cell(60, tot_row, clean_text(" Totale autokosten"), fill=False)
             pdf.cell(30, tot_row, clean_text(f"EUR {fmt(tot_k)}"), align='R', fill=False)
@@ -700,13 +700,13 @@ if kenteken_input:
             pdf.cell(10, tot_row, "")
             pdf.cell(90, tot_row, "", fill=False, ln=True)
 
-            # Eindconclusie getallen
+            # Eindconclusie getallen - Zand-oranje achtergrond
             y_line = pdf.get_y()
             pdf.set_draw_color(0, 49, 92)
             pdf.line(10, y_line, 100, y_line)
             pdf.line(110, y_line, 200, y_line)
             
-            pdf.set_fill_color(255, 255, 255)
+            pdf.set_fill_color(249, 232, 223)
             pdf.set_text_color(0, 49, 92)
             pdf.set_font(f, 'B', 11)
             pdf.rect(10, y_line, 90, aft_row, 'F')
@@ -721,9 +721,9 @@ if kenteken_input:
 
             pdf.ln(gap_large)
 
-            # Chique "White Box" met Oranje zijlijn voor het eindadvies
+            # Chique Zand-oranje "Card" met Oranje zijlijn voor het eindadvies
             y_conclusie = pdf.get_y()
-            pdf.set_fill_color(255, 255, 255)
+            pdf.set_fill_color(249, 232, 223) 
             pdf.rect(10, y_conclusie, 190, ban_h, 'F')
             pdf.set_fill_color(232, 78, 15)
             pdf.rect(10, y_conclusie, 3, ban_h, 'F') 
