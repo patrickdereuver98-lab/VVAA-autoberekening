@@ -318,7 +318,6 @@ if kenteken_input:
                     with st.expander("ℹ️ Uitleg Brandstof & Bron"):
                         st.write("De voorgestelde literprijs is gebaseerd op de actuele gemiddelde landelijke adviesprijs (bron: UnitedConsumers). De kosten worden berekend via de formule: *(Totale km / 100) × Verbruik × Literprijs*.")
                 
-                # Variabelen initialiseren om NameErrors te voorkomen bij de omslagpunt berekening
                 brandstof_kosten = 0.0
                 laad_kosten = 0.0
                 verbruik_l = 0.0
@@ -390,7 +389,7 @@ if kenteken_input:
         pri_aftrek = round(z_km * 0.23)
         advies = "Zakelijk voordeliger" if zak_aftrek > pri_aftrek else "Privé voordeliger"
 
-        # --- NIEUW: OMSLAGPUNT BEREKENING (Simulatie) ---
+        # --- OMSLAGPUNT BEREKENING (Simulatie) ---
         var_cost_per_km = 0.0
         if is_brandstof or (not is_brandstof and not is_ev):
             var_cost_per_km += (verbruik_l / 100.0) * prijs_l
@@ -403,19 +402,26 @@ if kenteken_input:
         vaste_prive_km_kosten = var_cost_per_km * p_km
         
         omslagpunt = None
-        beter_bij_meer = ""
+        richting = ""
         
         def sim_verschil(z):
             sim_k = vaste_kosten + vaste_prive_km_kosten + (var_cost_per_km * z)
             sim_b = 0.0 if is_minder_dan_500 else min(bijt_bruto, sim_k)
             return (sim_k - sim_b) - (z * 0.23)
             
-        sign_0 = sim_verschil(0) > 0 # Is zakelijk beter bij 0 km?
-        for test_z in range(100, 150001, 100): # Simuleer tot max 150.000 zakelijke km
-            if (sim_verschil(test_z) > 0) != sign_0:
-                omslagpunt = test_z
-                beter_bij_meer = "Zakelijk rijden" if sim_verschil(test_z) > 0 else "Privé rijden"
-                break
+        # Alleen berekenen als Zakelijk momenteel NIET de winnaar is
+        if advies == "Privé voordeliger":
+            sign_0 = sim_verschil(0) > 0 # Controleer of zakelijk beter is bij 0 km
+            for test_z in range(100, 150001, 100): 
+                if (sim_verschil(test_z) > 0) != sign_0:
+                    omslagpunt = test_z
+                    break
+            
+            if omslagpunt:
+                if z_km > omslagpunt:
+                    richting = "minder"
+                else:
+                    richting = "meer"
 
         with st.container(border=True):
             st.markdown("### 📊 3. Resultaat & Fiscaal Advies")
@@ -426,8 +432,8 @@ if kenteken_input:
             st.success(f"**Conclusie:** Vanuit fiscaal oogpunt is de optie **{advies}**.")
             
             # --- OMSLAGPUNT WEERGAVE ---
-            if omslagpunt:
-                st.info(f"⚖️ **Advies Omslagpunt:** Bij deze uitgangspunten ligt het kantelpunt op circa **{fmt(omslagpunt)} zakelijke kilometers** per jaar. Vanaf dit aantal wordt de keuze voor **{beter_bij_meer}** voordeliger.")
+            if advies == "Privé voordeliger" and omslagpunt:
+                st.info(f"⚖️ **Tip van de adviseur:** Zakelijk rijden wordt in deze situatie pas voordeliger bij **{richting} dan {fmt(omslagpunt)} zakelijke kilometers** per jaar.")
             
             html_result = f"""<div style='display: flex; gap: 20px; margin-top: 20px; margin-bottom: 20px; flex-wrap: wrap;'>
 <div style='flex: 1; min-width: 300px; background: #FFFFFF; padding: 25px; border-radius: 12px; border-top: 6px solid {VVAA_BLAUW}; box-shadow: 0 4px 12px rgba(0, 49, 92, 0.08); border: 1px solid #E0E6ED;'>
