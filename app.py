@@ -289,9 +289,9 @@ if kenteken_input:
                 with st.expander("ℹ️ Uitleg Waarde & Bijtelling"):
                     st.write("Selecteer het juiste bijtellingsprofiel. De berekende bijtelling wordt automatisch gemaximeerd (afgetopt) als deze onverhoopt hoger uitvalt dan de totale werkelijke autokosten.")
                 
-                st.markdown(f"<div style='height: 35px; display: flex; align-items: center;'><strong>Cataloguswaarde (RDW):</strong>&nbsp;€ {fmt(auto['catalogusprijs'])}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='height: 35px; display: flex; align-items: center; color: {VVAA_BLAUW};'><strong>Cataloguswaarde (RDW):</strong>&nbsp;€ {fmt(auto['catalogusprijs'])}</div>", unsafe_allow_html=True)
                 
-                aanschaf = st.number_input("Aanschafwaarde / Dagwaarde (€)", value=int(auto['catalogusprijs']))
+                aanschaf = st.number_input("Aanschafprijs / Taxatiewaarde (€)", value=int(auto['catalogusprijs']))
                 
                 idx_bijt = bepaal_bijtelling_index(peil_jaar, is_full_ev, is_young_manual)
                 gekozen_bijt = st.selectbox("Bijtellingsprofiel", BIJTELLING_OPTIES, index=idx_bijt)
@@ -311,7 +311,6 @@ if kenteken_input:
             with col2:
                 st.markdown("#### Verbruik & Brandstof")
                 
-                # --- AANGEPASTE DYNAMISCHE INFO EXPANDER ---
                 if is_full_ev:
                     with st.expander("ℹ️ Uitleg Stroomprijs & Bron"):
                         st.write("De stroomprijs is standaard ingesteld op een schatting van € 0,40 per kWh, maar je kunt deze zelf aanpassen. De kosten worden berekend via de formule: *(Totale km / 100) × Verbruik × Prijs per kWh*.")
@@ -327,7 +326,7 @@ if kenteken_input:
                     if auto['rdw_verbruik'] == 0.0:
                         st.info("ℹ️ RDW verbruik onbekend. Vul zelf in.")
                     
-                    st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Actuele brandstofprijzen ingeladen.</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='height: 35px; display: flex; align-items: center; color: {VVAA_BLAUW};'>Actuele brandstofprijzen ingeladen.</div>", unsafe_allow_html=True)
                     verbruik_l = st.number_input("Verbruik (L/100km)", value=float(auto['rdw_verbruik']))
                     
                     bs_lower = [b.lower() for b in auto['brandstoffen']]
@@ -343,8 +342,9 @@ if kenteken_input:
                 if is_ev:
                     if not is_brandstof: st.info("ℹ️ Stroomverbruik onbekend. Vul zelf in (bijv. 18.0).")
                     
-                    # --- AANGEPAST STROOM INVOERVELD ---
-                    st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Stroomprijs voorgesteld op € 0,40 / kWh.</div>", unsafe_allow_html=True)
+                    # Onzichtbaar blokje om uitlijning met de andere kolommen in stand te houden!
+                    st.markdown("<div style='height: 35px;'></div>", unsafe_allow_html=True)
+                    
                     verbruik_kwh = st.number_input("Verbruik Stroom (kWh/100km)", value=0.0)
                     price_kwh = st.number_input("Prijs per kWh (€)", value=0.40)
                     calc_laad = ((z_km + p_km) / 100) * verbruik_kwh * price_kwh
