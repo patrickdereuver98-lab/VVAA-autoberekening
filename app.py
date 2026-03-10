@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import math
 import re
+import urllib.parse
 from fpdf import FPDF
 from dateutil.relativedelta import relativedelta
 
@@ -75,11 +76,9 @@ class VVAAPDF(FPDF):
             self.font_fam = "Arial"
 
     def header(self):
-        # --- AANGEPAST: VvAA Grijs als rustige donkerdere achtergrond ---
         self.set_fill_color(244, 246, 248) 
         self.rect(0, 0, 210, 297, 'F')
         
-        # Oranje accentlijn bovenin
         self.set_fill_color(232, 78, 15)
         self.rect(0, 0, 210, 4, 'F')
         
@@ -398,6 +397,10 @@ if kenteken_input:
                 verzekering = st.number_input("Verzekering per jaar (€)", value=0.0)
                 overige = st.number_input("Overige kosten per jaar (€)", value=250.0 if gebruik_schatting else 0.0)
                 
+                # --- NIEUW: HANDMATIGE AFSCHRIJVING VELD ---
+                calc_afschr = round((aanschaf * 0.8) * 0.2)
+                afschr = st.number_input("Afschrijving per jaar (€)", value=float(calc_afschr))
+                
                 lease_kosten = 0.0
                 rente_kosten = 0.0
                 if is_geleased:
@@ -406,7 +409,6 @@ if kenteken_input:
                     lease_kosten = st.number_input("Leasekosten per jaar (€)", value=0.0)
                     rente_kosten = st.number_input("Rentekosten lening per jaar (€)", value=0.0)
 
-        afschr = round((aanschaf * 0.8) * 0.2)
         tot_k = round(brandstof_kosten + laad_kosten + mrb + onderhoud + verzekering + overige + afschr + lease_kosten + rente_kosten + btw_correctie)
         
         is_gemaximeerd = bijt_bruto > tot_k and not is_minder_dan_500
@@ -590,13 +592,12 @@ if kenteken_input:
             ban_h = 10 if is_heavy else 12
             disclaimer_h = 3.5 if is_heavy else 4
             
-            # --- NIEUWE VORMGEVING PDF ---
+            # --- PDF GENERATIE ---
             pdf = VVAAPDF()
             pdf.set_auto_page_break(auto=True, margin=15) 
             pdf.add_page()
             f = pdf.font_fam
             
-            # VvAA Zand-Oranje 'Card' voor Relatiegegevens
             pdf.set_y(35)
             pdf.set_fill_color(249, 232, 223) 
             pdf.set_draw_color(249, 232, 223)
@@ -625,7 +626,6 @@ if kenteken_input:
             pdf.set_text_color(0, 49, 92)
             pdf.cell(0, 6, clean_text("3. Uitgangspunten voor berekening"), ln=True)
             
-            # Subtiele lijn i.p.v. zware blokken
             pdf.set_draw_color(200, 210, 220)
             pdf.set_line_width(0.3)
             pdf.line(10, pdf.get_y(), 200, pdf.get_y())
@@ -644,7 +644,6 @@ if kenteken_input:
             pdf.set_text_color(0, 49, 92)
             pdf.cell(0, 8, clean_text("4. Financiële Vergelijking (Per Jaar)"), ln=True)
 
-            # Luchtige, moderne tabelkoppen
             pdf.set_font(f, 'B', 10)
             pdf.set_text_color(232, 78, 15)
             
@@ -664,7 +663,6 @@ if kenteken_input:
                 l_lbl, l_val = left_items[i] if i < len(left_items) else ("", "")
                 r_lbl, r_val = right_items[i] if i < len(right_items) else ("", "")
 
-                # Zebra patroon met Zand-oranje vs Transparant
                 fill = True if i % 2 == 0 else False
                 pdf.set_fill_color(249, 232, 223) 
 
@@ -680,7 +678,6 @@ if kenteken_input:
                 pdf.set_font(f, 'B' if r_val else '', 10)
                 pdf.cell(30, tbl_row, clean_text(r_val), align='R', fill=fill, ln=True)
 
-            # Subtiele lijn boven totalen
             pdf.set_draw_color(0, 49, 92)
             pdf.set_line_width(0.2)
             y_line = pdf.get_y()
@@ -700,7 +697,6 @@ if kenteken_input:
             pdf.cell(10, tot_row, "")
             pdf.cell(90, tot_row, "", fill=False, ln=True)
 
-            # Eindconclusie getallen - Zand-oranje achtergrond
             y_line = pdf.get_y()
             pdf.set_draw_color(0, 49, 92)
             pdf.line(10, y_line, 100, y_line)
@@ -721,7 +717,6 @@ if kenteken_input:
 
             pdf.ln(gap_large)
 
-            # Chique Zand-oranje "Card" met Oranje zijlijn voor het eindadvies
             y_conclusie = pdf.get_y()
             pdf.set_fill_color(249, 232, 223) 
             pdf.rect(10, y_conclusie, 190, ban_h, 'F')
@@ -770,6 +765,18 @@ Mocht je nog vragen hebben of de berekening willen aanpassen met andere kilomete
             st.caption("Gebruik het handige **kopieer-icoontje rechtsbovenin het blok** hieronder om de hele tekst in één keer te kopiëren voor in je Outlook e-mail.")
             
             st.code(email_text, language="text")
+            
+            # --- NIEUW: DIRECT OPENEN IN OUTLOOK KNOP ---
+            subject = f"Autoberekening voor de {auto['merk'].title()} {auto['handelsbenaming'].title()}"
+            mailto_url = f"mailto:?subject={urllib.parse.quote(subject)}&body={urllib.parse.quote(email_text)}"
+            
+            st.markdown(f"""
+            <a href="{mailto_url}" target="_blank" style="text-decoration: none;">
+                <div style="background-color: {VVAA_BLAUW}; color: white; padding: 12px 24px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 15px; box-shadow: 0 4px 6px rgba(0, 49, 92, 0.15); transition: all 0.3s ease;">
+                    📧 Open direct in Outlook (Nieuw bericht)
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
             
         else:
             st.info("ℹ️ Vul de Naam en een numeriek Lidnummer in om het rapport te kunnen genereren.")
