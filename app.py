@@ -311,8 +311,13 @@ if kenteken_input:
             with col2:
                 st.markdown("#### Verbruik & Brandstof")
                 
-                with st.expander("ℹ️ Uitleg Brandstof & Bron"):
-                    st.write("De voorgestelde literprijs is gebaseerd op de actuele gemiddelde landelijke adviesprijs (bron: UnitedConsumers). De kosten worden berekend via de formule: *(Totale km / 100) × Verbruik × Literprijs*.")
+                # --- AANGEPASTE DYNAMISCHE INFO EXPANDER ---
+                if is_full_ev:
+                    with st.expander("ℹ️ Uitleg Stroomprijs & Bron"):
+                        st.write("De stroomprijs is standaard ingesteld op een schatting van € 0,40 per kWh, maar je kunt deze zelf aanpassen. De kosten worden berekend via de formule: *(Totale km / 100) × Verbruik × Prijs per kWh*.")
+                else:
+                    with st.expander("ℹ️ Uitleg Brandstof & Bron"):
+                        st.write("De voorgestelde literprijs is gebaseerd op de actuele gemiddelde landelijke adviesprijs (bron: UnitedConsumers). De kosten worden berekend via de formule: *(Totale km / 100) × Verbruik × Literprijs*.")
                 
                 brandstof_kosten = 0.0
                 laad_kosten = 0.0
@@ -337,9 +342,11 @@ if kenteken_input:
                 
                 if is_ev:
                     if not is_brandstof: st.info("ℹ️ Stroomverbruik onbekend. Vul zelf in (bijv. 18.0).")
-                    st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Stroomprijs berekend op € 0,40 / kWh.</div>", unsafe_allow_html=True)
+                    
+                    # --- AANGEPAST STROOM INVOERVELD ---
+                    st.markdown("<div style='height: 35px; display: flex; align-items: center;'>Stroomprijs voorgesteld op € 0,40 / kWh.</div>", unsafe_allow_html=True)
                     verbruik_kwh = st.number_input("Verbruik Stroom (kWh/100km)", value=0.0)
-                    price_kwh = 0.40
+                    price_kwh = st.number_input("Prijs per kWh (€)", value=0.40)
                     calc_laad = ((z_km + p_km) / 100) * verbruik_kwh * price_kwh
                     laad_kosten = float(round(calc_laad))
                     laad_kosten = st.number_input("Laadkosten per jaar (€)", value=laad_kosten)
