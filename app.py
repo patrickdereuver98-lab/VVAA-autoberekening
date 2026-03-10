@@ -50,9 +50,16 @@ vvaa_css = f"""
     div[data-testid="stAlert"] * {{ color: {VVAA_BLAUW} !important; }}
     div[data-testid="stAlert"] svg {{ fill: {VVAA_BLAUW} !important; }}
 
-    /* --- EMAIL CODE BLOCK FIX --- */
+    /* --- EMAIL CODE BLOCK FIX (Agressieve overschrijving naar Arial 10pt) --- */
     [data-testid="stCodeBlock"] {{ background-color: transparent !important; }}
-    [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code {{ font-family: 'Arial', sans-serif !important; font-size: 10pt !important; white-space: pre-wrap !important; color: #00315C !important; background-color: #FFFFFF !important; border: 1px solid #E0E6ED; border-radius: 6px; padding: 15px; }}
+    [data-testid="stCodeBlock"] pre {{ background-color: #FFFFFF !important; border: 1px solid #E0E6ED !important; border-radius: 6px !important; padding: 15px !important; white-space: pre-wrap !important; }}
+    [data-testid="stCodeBlock"] code, 
+    [data-testid="stCodeBlock"] pre, 
+    [data-testid="stCodeBlock"] span {{ 
+        font-family: 'Arial', sans-serif !important; 
+        font-size: 10pt !important; 
+        color: #00315C !important; 
+    }}
 </style>
 """
 st.markdown(vvaa_css, unsafe_allow_html=True)
