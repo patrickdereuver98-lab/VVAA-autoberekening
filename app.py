@@ -683,15 +683,26 @@ if kenteken_input:
             # --- NIEUW: MAGIC EMAIL GENERATOR ---
             st.markdown("---")
             st.markdown("### ✉️ Concept E-mail naar klant")
-            st.caption("Kopieer onderstaande tekst om het rapport snel en professioneel te delen via e-mail.")
             
-            # Bepaal slim de voornaam van de relatie (pakt het eerste woord)
             voornaam = klant_naam.split(' ')[0] if klant_naam else "klant"
             
-            email_text = f"Beste {voornaam},\n\nHierbij ontvang je de autoberekening. We hebben de berekening gemaakt op basis van de gegevens die je ons had toegestuurd.\n\nUit de berekening blijkt dat het voor de {auto['merk'].title()} {auto['handelsbenaming'].title()} op dit moment het voordeligste is om deze {advies.split(' ')[0].lower()} te rijden.\n\nIn de bijlage vind je de uitgebreide berekening met alle specificaties en uitgangspunten. Mocht je nog vragen hebben of de berekening willen aanpassen, laat het dan gerust weten!"
+            # --- UITGEBREIDERE EMAIL TEKST ---
+            email_text = f"""Beste {voornaam},
+
+Hierbij ontvang je de aangevraagde autoberekening voor de {auto['merk'].title()} {auto['handelsbenaming'].title()}. 
+
+We hebben deze berekening gemaakt op basis van de door jou doorgegeven verwachting van {fmt(z_km)} zakelijke en {fmt(p_km)} privé kilometers per jaar.
+
+Uit onze analyse blijkt dat het in deze situatie fiscaal het meest voordelig is om de auto {advies.split(' ')[0].lower()} te rijden.
+
+In de bijlage vind je het uitgebreide rapport met de exacte kostenopbouw, de gemaakte aannames en de vergelijking van het uiteindelijke belastingvoordeel. 
+
+Mocht je nog vragen hebben of de berekening willen aanpassen met andere kilometers of bedragen, laat het ons dan gerust weten!"""
             
-            # Tekstvak waar de mail direct uit te kopiëren valt
-            st.text_area("Kopieer deze tekst:", value=email_text, height=200, label_visibility="collapsed")
+            st.caption("Gebruik het handige **kopieer-icoontje rechtsbovenin het blok** hieronder om de hele tekst in één keer te kopiëren voor in je e-mail.")
+            
+            # --- STREAMLIT COPY BUTTON TRUC ---
+            st.code(email_text, language="text")
             
         else:
             st.info("ℹ️ Vul de Naam en een numeriek Lidnummer in om het rapport te kunnen genereren.")
